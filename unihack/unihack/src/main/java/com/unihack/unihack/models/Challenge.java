@@ -2,15 +2,19 @@ package com.unihack.unihack.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.GenericGenerator;
+
+import java.util.UUID;
 
 @Entity
 public class Challenge {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    private UUID id;
 
-    @NotBlank(message = "Title is required")
+    @NotBlank(message = "Title is required") 
     private String title;
 
     @NotBlank(message = "Description is required")
@@ -33,11 +37,11 @@ public class Challenge {
         EASY, MEDIUM, HARD
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -81,5 +85,5 @@ public class Challenge {
         this.user = user;
     }
 
-    
+
 }

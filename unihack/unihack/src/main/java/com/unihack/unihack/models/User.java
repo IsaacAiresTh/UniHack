@@ -2,15 +2,19 @@ package com.unihack.unihack.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import java.util.UUID;
 import java.util.List;
 
 @Entity
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
     @NotBlank(message = "Username is required")
     @Column(unique = true, nullable = false)
     private String username;
@@ -26,23 +30,12 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Challenge> challenges;
+    private UserRole role = UserRole.USER;
 
     // Getters and Setters
 
     public enum Role {
         USER, ADMIN
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getUsername() {
@@ -69,21 +62,15 @@ public class User {
         this.password = password;
     }
 
-    public Role getRole() {
+    public UserRole getRole() {
         return role;
     }
 
-    public void setRole(Role role) {
+    public void setRole(UserRole role) {
         this.role = role;
     }
 
-    public List<Challenge> getChallenges() {
-        return challenges;
+    public UUID getId() {
+        return id;
     }
-
-    public void setChallenges(List<Challenge> challenges) {
-        this.challenges = challenges;
-    }
-
-    
 }
