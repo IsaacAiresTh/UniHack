@@ -1,5 +1,3 @@
----
-
 # UniHack
 
 **UniHack** é uma plataforma de *Capture The Flag* (CTF) gamificada, desenvolvida com o objetivo de fomentar a cultura de segurança da informação entre os alunos da **UNICEPLAC**. Através de desafios práticos, rankings, conquistas e níveis, a plataforma incentiva o aprendizado contínuo em um ambiente competitivo e colaborativo.
@@ -62,4 +60,3 @@ Este projeto é mantido por estudantes da UNICEPLAC, mas colaborações são bem
 
 Este projeto está licenciado sob a [MIT License](LICENSE).
 
----
