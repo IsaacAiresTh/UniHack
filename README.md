@@ -49,12 +49,7 @@ unihack/
 
 ## 📚 Contribuindo
 
-Este projeto é mantido por estudantes da UNICEPLAC, mas colaborações são bem-vindas!
-
-1. Fork este repositório.
-2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`).
-3. Faça suas alterações e *commits*.
-4. Envie um *pull request*.
+Este projeto é mantido por estudantes da UNICEPLAC
 
 ## 📄 Licença
 
