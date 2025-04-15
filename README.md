@@ -29,8 +29,8 @@
 > Requisitos: Docker e Docker Compose instalados
 
 ```bash
-git clone https://github.com/seu-usuario/unihack.git
-cd unihack
+git clone https://github.com/Isaac-code-maker/UniHack
+cd UniHack
 docker-compose up --build
 ```
 
