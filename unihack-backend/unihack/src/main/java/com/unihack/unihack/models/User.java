@@ -3,6 +3,9 @@ package com.unihack.unihack.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.util.UUID;
+
+import com.unihack.unihack.enums.UserRole;
+
 import java.util.List;
 
 @Entity
@@ -33,6 +36,12 @@ public class User {
     private UserRole role = UserRole.USER;
 
     // Getters and Setters
+
+    public User(String name, String email, String password) {
+        this.username = name;
+        this.email = email;
+        this.password = password;
+    }
 
     public enum Role {
         USER, ADMIN

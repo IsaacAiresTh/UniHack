@@ -6,27 +6,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.unihack.unihack.models.User;
 import com.unihack.unihack.repository.UserRepository;
 
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.GetMapping;
+
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpHeaders;
-
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatusCode;
 
 @RestController
 @RequestMapping("/auth")
@@ -42,7 +29,7 @@ public class AuthController {
         // Return a response indicating success or failure
         // Validation logic can be added here if needed
 
-        if (UserRepository.existsByEmail(user.get("email"))) {
+        if (userRepository.existsByEmail(user.get("email"))) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("message", "User already exists"));
         } else {
@@ -61,7 +48,7 @@ public class AuthController {
         // Removed unused result variable and related block
 
         
-        if (UserRepository.existsByEmail(user.get("email"))) {
+        if (userRepository.existsByEmail(user.get("email"))) {
             return ResponseEntity.status(HttpStatus.OK).body(Map.of("message", "User logged in successfully"));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
