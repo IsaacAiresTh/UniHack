@@ -2,13 +2,17 @@ package com.unihack.unihack.dtos;
 
 import java.util.UUID;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 public class UserDto {
     private UUID id;
 
     @NotNull(message = "O nome não pode ser nulo")
     private String name;
 
-    @email(message = "O email deve ser válido")
+    @Email(message = "O email deve ser válido")
     @NotNull(message = "O email não pode ser nulo")
     private String email;
 

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/challenges")
@@ -24,7 +25,7 @@ public class ChallengeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Challenge> getChallengeById(@PathVariable Long id) {
+    public ResponseEntity<Challenge> getChallengeById(@PathVariable UUID id) {
         return challengeRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -36,7 +37,7 @@ public class ChallengeController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Challenge> updateChallenge(@PathVariable Long id, @Valid @RequestBody Challenge challengeDetails) {
+    public ResponseEntity<Challenge> updateChallenge(@PathVariable UUID id, @Valid @RequestBody Challenge challengeDetails) {
         return challengeRepository.findById(id)
                 .map(challenge -> {
                     challenge.setTitle(challengeDetails.getTitle());
@@ -49,7 +50,7 @@ public class ChallengeController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteChallenge(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteChallenge(@PathVariable UUID id) {
         if (challengeRepository.existsById(id)) {
             challengeRepository.deleteById(id);
             return ResponseEntity.noContent().build();

@@ -1,8 +1,9 @@
-package main.java.com.unihack.unihack.controllers;
+package com.unihack.unihack.controllers;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.unihack.unihack.models.User;
 import com.unihack.unihack.repository.UserRepository;
 
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -19,12 +20,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.HttpStatusCodeException;
 
 @RestController
 @RequestMapping("/auth")
@@ -38,12 +40,7 @@ public class AuthController {
         // Logic to register the user
         // Save the user to the database using userRepository
         // Return a response indicating success or failure
-        if (result.hasErrors()) {
-            Map<String, String> errors = new HashMap<>();
-            result.getFieldErrors()
-                    .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
-            return ResponseEntity.badRequest().body(errors);
-        }
+        // Validation logic can be added here if needed
 
         if (UserRepository.existsByEmail(user.get("email"))) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -61,12 +58,7 @@ public class AuthController {
         // Logic to authenticate the user
         // Check if the user exists in the database using userRepository
         // Return a response indicating success or failure
-        if (result.hasErrors()) {
-            Map<String, String> errors = new HashMap<>();
-            result.getFieldErrors()
-                    .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
-            return ResponseEntity.badRequest().body(errors);
-        }
+        // Removed unused result variable and related block
 
         
         if (UserRepository.existsByEmail(user.get("email"))) {
