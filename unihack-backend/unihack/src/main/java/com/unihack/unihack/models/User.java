@@ -9,6 +9,7 @@ import com.unihack.unihack.enums.UserRole;
 import java.util.List;
 
 @Entity
+@Table(name = "users")
 public class User {
 
     @Id
