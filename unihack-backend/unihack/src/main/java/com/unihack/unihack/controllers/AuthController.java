@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @RestController
 @RequestMapping("/auth")
@@ -22,32 +23,24 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder; // Injetar o codificador de senha
+
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@RequestBody Map<String, String> user) {
-        // Logic to register the user
-        // Save the user to the database using userRepository
-        // Return a response indicating success or failure
-        // Validation logic can be added here if needed
-
         if (userRepository.existsByEmail(user.get("email"))) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("message", "User already exists"));
         } else {
-            User newUser = new User(user.get("name"), user.get("email"), user.get("password"));
+            String encodedPassword = passwordEncoder.encode(user.get("password")); // Codificar a senha
+            User newUser = new User(user.get("name"), user.get("email"), encodedPassword);
             userRepository.save(newUser);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "User registered successfully"));
-
         }
     }
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> user) {
-        // Logic to authenticate the user
-        // Check if the user exists in the database using userRepository
-        // Return a response indicating success or failure
-        // Removed unused result variable and related block
-
-        
         if (userRepository.existsByEmail(user.get("email"))) {
             return ResponseEntity.status(HttpStatus.OK).body(Map.of("message", "User logged in successfully"));
         } else {

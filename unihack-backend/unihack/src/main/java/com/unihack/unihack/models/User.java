@@ -5,11 +5,15 @@ import jakarta.validation.constraints.*;
 import java.util.UUID;
 
 import com.unihack.unihack.enums.UserRole;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Entity
 @Table(name = "users")
+@AllArgsConstructor
+@NoArgsConstructor
 public class User {
 
     @Id

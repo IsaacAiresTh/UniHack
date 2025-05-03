@@ -21,15 +21,18 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(
-                (requests) -> requests
-                        .requestMatchers(HttpMethod.POST,"/users").permitAll()
-                        .requestMatchers(HttpMethod.GET,"/challenges/**").hasRole(UserRole.USER.name())
-                        .requestMatchers("/challenges/**").hasRole(UserRole.ADMIN.name())
-                        .requestMatchers("/users/**").authenticated()
-                        .anyRequest().permitAll()
-
-        ).httpBasic(withDefaults());
+        http.csrf().disable() // Desabilitar CSRF para APIs REST
+            .authorizeHttpRequests(
+                    (requests) -> requests
+                            .requestMatchers(HttpMethod.POST,"/users").permitAll()
+                            .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
+                            .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                            .requestMatchers(HttpMethod.GET,"/challenges/**").hasRole(UserRole.USER.name())
+                            .requestMatchers("/challenges/**").hasRole(UserRole.ADMIN.name())
+                            .requestMatchers("/users/**").authenticated()
+                            .anyRequest().permitAll()
+            )
+            .httpBasic(withDefaults());
         return http.build();
     }
 
