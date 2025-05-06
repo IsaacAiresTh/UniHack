@@ -4,6 +4,7 @@ import com.unihack.unihack.models.Challenge;
 import com.unihack.unihack.repository.ChallengeRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -19,24 +20,25 @@ public class ChallengeController {
         this.challengeRepository = challengeRepository;
     }
 
-    @GetMapping
+    @GetMapping("/all")
+    @PreAuthorize("isAuthenticated()")
     public List<Challenge> getAllChallenges() {
         return challengeRepository.findAll();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/details/{id}")
     public ResponseEntity<Challenge> getChallengeById(@PathVariable UUID id) {
         return challengeRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<Challenge> createChallenge(@Valid @RequestBody Challenge challenge) {
         return ResponseEntity.ok(challengeRepository.save(challenge));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/update/{id}")
     public ResponseEntity<Challenge> updateChallenge(@PathVariable UUID id, @Valid @RequestBody Challenge challengeDetails) {
         return challengeRepository.findById(id)
                 .map(challenge -> {
@@ -49,7 +51,7 @@ public class ChallengeController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/delete/{id}")
     public ResponseEntity<Void> deleteChallenge(@PathVariable UUID id) {
         if (challengeRepository.existsById(id)) {
             challengeRepository.deleteById(id);

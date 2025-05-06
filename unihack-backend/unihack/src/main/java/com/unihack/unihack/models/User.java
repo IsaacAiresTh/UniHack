@@ -6,10 +6,14 @@ import java.util.UUID;
 
 import com.unihack.unihack.enums.UserRole;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.List;
 
+@Setter
+@Getter
 @Entity
 @Table(name = "users")
 @AllArgsConstructor
@@ -20,9 +24,6 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
     @NotBlank(message = "Username is required")
     @Column(unique = true, nullable = false)
     private String username;
@@ -52,39 +53,4 @@ public class User {
         USER, ADMIN
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
-
-    public UUID getId() {
-        return id;
-    }
 }
