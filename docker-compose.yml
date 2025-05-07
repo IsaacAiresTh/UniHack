@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   db:
     image: postgres:15
@@ -13,7 +15,7 @@ services:
 
   backend:
     build:
-      context: .
+      context: ./unihack-backend
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -24,6 +26,20 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
     restart: always
+
+  desafio-sqli:
+    build: ./desafios/sqli
+    ports:
+      - "3001:80"
+    depends_on:
+      - sqli-db
+
+  sqli-db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./desafios/sqli/db:/docker-entrypoint-initdb.d
 
 volumes:
   db-data:

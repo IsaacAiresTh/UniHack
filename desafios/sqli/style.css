@@ -1,0 +1,94 @@
+body {
+    background-color: #0f172a;
+    font-family: 'Segoe UI', sans-serif;
+    color: #f1f5f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-container {
+    background-color: #1e293b;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    width: 320px;
+    text-align: center;
+}
+
+.login-container h1 {
+    font-size: 1.8rem;
+    color: #38bdf8;
+    margin-bottom: 0.2rem;
+}
+
+.login-container h2 {
+    font-size: 1rem;
+    font-weight: normal;
+    margin-bottom: 1.5rem;
+    color: #94a3b8;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 1rem;
+    border: none;
+    border-radius: 6px;
+    background-color: #334155;
+    color: #f1f5f9;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #38bdf8;
+    border: none;
+    border-radius: 6px;
+    color: #0f172a;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0ea5e9;
+}
+
+.success {
+    color: #4ade80;
+    margin-top: 1rem;
+}
+
+.error {
+    color: #f87171;
+    margin-top: 1rem;
+}
+
+
+.flag-container {
+    background-color: #1e293b;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    text-align: center;
+    width: 320px;
+}
+
+.flag-container h1 {
+    font-size: 1.8rem;
+    color: #4ade80;
+    margin-bottom: 1rem;
+}
+
+.flag {
+    background-color: #334155;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 1rem;
+    color: #f1f5f9;
+    word-break: break-word;
+    margin-top: 1rem;
+    border-left: 4px solid #4ade80;
+}
