@@ -15,7 +15,7 @@ services:
 
   backend:
     build:
-      context: ./unihack-backend
+      context: ./unihack-backend/unihack
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -28,7 +28,9 @@ services:
     restart: always
 
   desafio-sqli:
-    build: ./desafios/sqli
+    build:
+      context: ./desafios/sqli
+      dockerfile: Dockerfile
     ports:
       - "3001:80"
     depends_on:

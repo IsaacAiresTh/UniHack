@@ -5,7 +5,6 @@ if (!isset($_SESSION['flag_unlocked']) || $_SESSION['flag_unlocked'] !== true) {
     exit;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>

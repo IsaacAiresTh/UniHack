@@ -1,4 +1,4 @@
-FROM php:7.4-apache
+FROM php:8.1-apache
 
 # Copia os arquivos do app para o diretório padrão do Apache
 COPY . /var/www/html/
