@@ -17,7 +17,7 @@ if (isset($_GET['user']) && isset($_GET['pass'])) {
     if ($result && $result->num_rows > 0) {
         $_SESSION['flag_unlocked'] = true;
         header("Location: flag.php");
-        exit; // Certifique-se de que o script termina aqui
+        exit;
     } else {
         echo "<p class='error'>Credenciais inválidas.</p>";
     }

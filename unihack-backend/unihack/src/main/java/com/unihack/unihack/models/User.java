@@ -41,6 +41,10 @@ public class User {
     @Column(nullable = false)
     private UserRole role = UserRole.USER;
 
+    @Min(value = 0, message = "Points must be non-negative")
+    @Column(nullable = false)
+    private int points = 0;
+
     // Getters and Setters
 
     public User(String name, String email, String password) {
