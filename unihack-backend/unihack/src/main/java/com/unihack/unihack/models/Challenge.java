@@ -29,12 +29,8 @@ public class Challenge {
     @Column(nullable = false)
     private Difficulty difficulty;
 
-    @Min(value = 0, message = "Score must be a positive number")
+    @Min(value = 10, message = "Score must be a positive number")
     private int score;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
 
     // Getters and Setters
 
