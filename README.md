@@ -12,7 +12,7 @@
 ## ⚙️ Tecnologias Utilizadas
 
 - **Back-end:** Java + Spring Boot  
-- **Front-end:** React.js  
+- **Front-end:** Angular 19
 - **Banco de Dados:** PostgreSQL  
 - **Containerização:** Docker
 
@@ -42,7 +42,7 @@ docker-compose up --build
 ```
 unihack/
 ├── backend/        # Projeto Spring Boot
-├── frontend/       # Projeto React
+├── frontend/       # Projeto Angular
 ├── docker/         # Configurações de containerização
 └── docs/           # Documentação técnica
 ```
