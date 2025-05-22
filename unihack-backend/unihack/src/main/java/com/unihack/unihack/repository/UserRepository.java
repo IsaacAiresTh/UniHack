@@ -7,9 +7,9 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
-    boolean existsByEmail(String email);
+    boolean existsByMatricula(int matricula);
 
-    User findByEmail(String email);
+    User findByMatricula(int matricula);
 
     List<User> findAllByOrderByPointsDesc();
 }

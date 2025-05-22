@@ -28,13 +28,13 @@ public class User {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+    @NotBlank(message = "matricula is required")
     @Column(nullable = false)
-    private String email;
+    @Size(min = 7, max = 7, message = "matricula must be exactly 7 characters long")
+    private int matricula;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters long")
+    @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -47,9 +47,9 @@ public class User {
 
     // Getters and Setters
 
-    public User(String name, String email, String password) {
+    public User(String name, int matricula, String password) {
         this.username = name;
-        this.email = email;
+        this.matricula = matricula;
         this.password = password;
     }
 

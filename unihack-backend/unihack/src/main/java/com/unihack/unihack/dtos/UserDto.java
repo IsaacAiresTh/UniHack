@@ -13,8 +13,8 @@ public class UserDto {
     private String name;
 
     @Email(message = "O email deve ser válido")
-    @NotNull(message = "O email não pode ser nulo")
-    private String email;
+    @NotNull(message = "A matricula não pode ser nulo")
+    private int matricula;
 
     @Size(min = 8, message = "A senha deve ter pelo menos 8 caracteres")
     private String password;
@@ -36,12 +36,12 @@ public class UserDto {
         this.name = name;
     }
 
-    public String getEmail() {
-        return email;
+    public int getMatricula() {
+        return matricula;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setMatricula(int matricula) {
+        this.matricula = matricula;
     }
 
     

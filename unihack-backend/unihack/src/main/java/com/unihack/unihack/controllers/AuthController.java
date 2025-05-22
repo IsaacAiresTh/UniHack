@@ -33,12 +33,12 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterDto registerDto) {
-        if (userRepository.existsByEmail(registerDto.getEmail())) {
+        if (userRepository.existsByMatricula(registerDto.getMatricula())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("message", "User already exists"));
         } else {
             String encodedPassword = passwordEncoder.encode(registerDto.getPassword()); // Codificar a senha
-            User newUser = new User(registerDto.getName(), registerDto.getEmail(), encodedPassword);
+            User newUser = new User(registerDto.getName(), registerDto.getMatricula(), encodedPassword);
             userRepository.save(newUser);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "User registered successfully"));
         }
@@ -46,7 +46,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@Valid @RequestBody LoginDto loginDto) {
-        User user = userRepository.findByEmail(loginDto.getEmail());
+        User user = userRepository.findByMatricula(loginDto.getMatricula());
         if (user != null && passwordEncoder.matches(loginDto.getPassword(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.OK).body(Map.of("message", "User logged in successfully"));
         } else {

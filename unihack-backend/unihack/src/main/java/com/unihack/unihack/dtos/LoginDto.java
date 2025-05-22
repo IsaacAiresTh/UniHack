@@ -9,10 +9,9 @@ import lombok.Setter;
 @Getter
 public class LoginDto {
 
-    // Getters e Setters
-    @Email(message = "O email deve ser válido")
-    @NotNull(message = "O email não pode ser nulo")
-    private String email;
+    // Getters e Setterr
+    @NotNull(message = "A matricula não pode ser nulo")
+    private int matricula;
 
     @NotNull(message = "A senha não pode ser nula")
     private String password;
