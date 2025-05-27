@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.validation.Valid;
 
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
@@ -46,8 +47,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@Valid @RequestBody LoginDto loginDto) {
-        User user = userRepository.findByMatricula(loginDto.getMatricula());
-        if (user != null && passwordEncoder.matches(loginDto.getPassword(), user.getPassword())) {
+        Optional<User> user = userRepository.findByMatricula(loginDto.getMatricula());
+        if (user != null && passwordEncoder.matches(loginDto.getPassword(), user.get().getPassword())) {
             return ResponseEntity.status(HttpStatus.OK).body(Map.of("message", "User logged in successfully"));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

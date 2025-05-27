@@ -11,7 +11,7 @@ public class LoginDto {
 
     // Getters e Setterr
     @NotNull(message = "A matricula não pode ser nulo")
-    private int matricula;
+    private String matricula;
 
     @NotNull(message = "A senha não pode ser nula")
     private String password;

@@ -28,10 +28,10 @@ public class User {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @NotBlank(message = "matricula is required")
+    @NotNull(message = "matricula is required")
     @Column(nullable = false)
-    @Size(min = 7, max = 7, message = "matricula must be exactly 7 characters long")
-    private int matricula;
+    @Pattern(regexp = "\\d{7}", message = "Matricula deve conter exatos 7 números")
+    private String matricula;
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters long")
@@ -47,14 +47,11 @@ public class User {
 
     // Getters and Setters
 
-    public User(String name, int matricula, String password) {
+    public User(String name, @NotNull(message = "A matricula não pode ser nulo") String matricula, String password) {
         this.username = name;
         this.matricula = matricula;
         this.password = password;
     }
 
-    public enum Role {
-        USER, ADMIN
-    }
 
 }

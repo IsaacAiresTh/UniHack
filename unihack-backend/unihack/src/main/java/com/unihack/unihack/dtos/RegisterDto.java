@@ -15,7 +15,7 @@ public class RegisterDto {
     private String name;
 
     @NotNull(message = "A matricula não pode ser nulo")
-    private int matricula;
+    private String matricula;
 
     @Size(min = 8, message = "A senha deve ter pelo menos 8 caracteres")
     private String password;
