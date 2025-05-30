@@ -11,7 +11,7 @@ if (isset($_GET['user']) && isset($_GET['pass'])) {
     $user = $_GET['user'];
     $pass = $_GET['pass'];
 
-    $query = "SELECT * FROM logins WHERE user = '$user' -- AND pass = '$pass'";
+    $query = "SELECT * FROM logins WHERE user = '$user'  AND pass = '$pass'";
     $result = $conn->query($query);
 
     if ($result && $result->num_rows > 0) {
