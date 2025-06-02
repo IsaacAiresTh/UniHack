@@ -52,6 +52,10 @@ public class AuthController {
         //     return ResponseEntity.status(HttpStatus.CONFLICT)
         //             .body(Map.of("message", "Nome de usuário já existe."));
         // }
+        if (!registerDto.getPassword().equals(registerDto.getConfirmPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "As senhas não conferem."));
+        }
 
         String encodedPassword = passwordEncoder.encode(registerDto.getPassword());
         User newUser = new User(registerDto.getName(), registerDto.getMatricula(), encodedPassword);

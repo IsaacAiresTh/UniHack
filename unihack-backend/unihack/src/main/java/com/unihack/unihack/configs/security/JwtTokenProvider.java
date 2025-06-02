@@ -9,7 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,60 +24,60 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration-ms}")
     private long jwtExpirationInMs;
 
-    private Key key; // Chave HMAC-SHA para assinar o token
+    private SecretKey key;
 
     @PostConstruct
     public void init() {
-        // Transforma a string da chave secreta em um objeto Key seguro para HMAC-SHA
+        // Na versão 0.12.x, use SecretKey em vez de Key
         this.key = Keys.hmacShaKeyFor(secretKeyPlain.getBytes());
     }
 
-    // Extrai o nome de usuário (matrícula) do token JWT
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    // Extrai a data de expiração do token JWT
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    // Extrai uma claim específica usando uma função resolver
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    // Extrai todas as claims do token JWT
+    // MÉTODO ATUALIZADO PARA JJWT 0.12.x
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+        try {
+            return Jwts.parser()
+                    .verifyWith(key) // Mudança: verifyWith em vez de setSigningKey
+                    .build()
+                    .parseSignedClaims(token) // Mudança: parseSignedClaims em vez de parseClaimsJws
+                    .getPayload(); // Mudança: getPayload em vez de getBody
+        } catch (Exception e) {
+            System.err.println("Erro ao parsear token JWT: " + e.getMessage());
+            throw e;
+        }
     }
 
-    // Verifica se o token JWT expirou
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    // Gera um token JWT para um UserDetails (usuário)
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        // Pode adicionar mais claims aqui se precisar, por exemplo, papéis (roles)
-        // claims.put("roles", userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
-        return createToken(claims, userDetails.getUsername()); // Username aqui será a matrícula
+        return createToken(claims, userDetails.getUsername());
     }
 
-    // Cria o token JWT com as claims e o nome de usuário (matrícula)
     private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject) // Define o "dono" do token (matrícula)
-                .setIssuedAt(new Date(System.currentTimeMillis())) // Data de criação
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationInMs)) // Data de expiração
-                .signWith(key, SignatureAlgorithm.HS256) // Assina com a chave e algoritmo
+                .claims(claims) // Mudança: claims em vez de setClaims
+                .subject(subject) // Mudança: subject em vez de setSubject
+                .issuedAt(new Date(System.currentTimeMillis())) // Mudança: issuedAt em vez de setIssuedAt
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationInMs)) // Mudança: expiration em vez de setExpiration
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // Valida o token JWT (verifica se o nome de usuário é o mesmo e se não expirou)
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
