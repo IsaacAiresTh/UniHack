@@ -32,8 +32,6 @@ public class Challenge {
     @Min(value = 10, message = "Score must be a positive number")
     private int score;
 
-    // Getters and Setters
-
     public enum Difficulty {
         EASY, MEDIUM, HARD
     }

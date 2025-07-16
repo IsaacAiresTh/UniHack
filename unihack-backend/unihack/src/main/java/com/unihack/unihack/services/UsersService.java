@@ -1,12 +1,9 @@
 package com.unihack.unihack.services;
 
 import com.unihack.unihack.exceptions.UserNotFoundException; // Exemplo de exceção customizada
-import com.unihack.unihack.exceptions.UsernameAlreadyExistsException;
-import com.unihack.unihack.exceptions.MatriculaAlreadyExistsException;
 import com.unihack.unihack.models.User;
 import com.unihack.unihack.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.security.crypto.password.PasswordEncoder; // Importar se usar Spring Security
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
