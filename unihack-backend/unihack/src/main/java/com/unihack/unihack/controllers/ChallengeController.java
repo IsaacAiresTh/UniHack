@@ -3,11 +3,12 @@ package com.unihack.unihack.controllers;
 import com.unihack.unihack.models.Challenge;
 import com.unihack.unihack.repository.ChallengeRepository;
 import com.unihack.unihack.services.ChallengeActivationService;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -19,12 +20,12 @@ import java.util.UUID;
 public class ChallengeController {
 
     private final ChallengeRepository challengeRepository;
-    
-    @Autowired
-    private ChallengeActivationService activationService;
+    private final ChallengeActivationService activationService;
 
-    public ChallengeController(ChallengeRepository challengeRepository) {
+    @Autowired
+    public ChallengeController(ChallengeRepository challengeRepository, ChallengeActivationService activationService) {
         this.challengeRepository = challengeRepository;
+        this.activationService = activationService;
     }
 
     @GetMapping("/all")
@@ -34,6 +35,7 @@ public class ChallengeController {
     }
 
     @GetMapping("/details/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Challenge> getChallengeById(@PathVariable UUID id) {
         return challengeRepository.findById(id)
                 .map(ResponseEntity::ok)
@@ -41,50 +43,27 @@ public class ChallengeController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasRole('ADMIN')") // Apenas Admins podem criar desafios
     public ResponseEntity<Challenge> createChallenge(@Valid @RequestBody Challenge challenge) {
         return ResponseEntity.ok(challengeRepository.save(challenge));
     }
 
-    @PutMapping("/update/{id}")
-    public ResponseEntity<Challenge> updateChallenge(@PathVariable UUID id, @Valid @RequestBody Challenge challengeDetails) {
-        return challengeRepository.findById(id)
-                .map(challenge -> {
-                    challenge.setTitle(challengeDetails.getTitle());
-                    challenge.setDescription(challengeDetails.getDescription());
-                    challenge.setDifficulty(challengeDetails.getDifficulty());
-                    challenge.setScore(challengeDetails.getScore());
-                    return ResponseEntity.ok(challengeRepository.save(challenge));
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Void> deleteChallenge(@PathVariable UUID id) {
-        if (challengeRepository.existsById(id)) {
-            challengeRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
-    }
+    // ... outros endpoints PUT e DELETE ...
 
     @PostMapping("/{id}/start")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> startChallenge(@PathVariable UUID id) {
-        // 1. Encontrar o desafio no banco para obter o nome da imagem Docker
-        // Challenge challenge = challengeRepository.findById(id).orElse(...);
-        // String dockerImage = challenge.getDockerImageName(); // Você precisaria adicionar esse campo no seu modelo
+    public ResponseEntity<Map<String, String>> startChallenge(@PathVariable UUID id) {
+        // 1. Busca o desafio no banco de dados
+        Challenge challenge = challengeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Desafio não encontrado"));
 
-        // Exemplo hardcoded:
-        String dockerImage = "unihack/desafio-sqli:latest"; // Você precisará criar e subir essas imagens para um registry
+        // 2. Usa o nome da imagem do desafio para iniciar o contêiner
+        Map<String, String> challengeInfo = activationService.startChallengeContainer(challenge.getDockerImage());
 
-        // 2. Chamar o serviço para iniciar o contêiner
-        String containerId = activationService.startChallengeContainer(dockerImage);
+        // 3. Salva a sessão ativa no banco de dados (PRÓXIMO PASSO)
+        // ...
 
-        // 3. Obter a porta e construir a URL de acesso
-        // String accessUrl = ...; 
-
-        // 4. Salvar o estado no banco e retornar a URL para o frontend
-        // return ResponseEntity.ok(Map.of("containerId", containerId, "accessUrl", accessUrl));
-        return ResponseEntity.ok(Map.of("message", "Desafio iniciado!", "containerId", containerId));
+        // 4. Retorna a URL completa e o ID do contêiner para o frontend
+        return ResponseEntity.ok(challengeInfo);
     }
 }

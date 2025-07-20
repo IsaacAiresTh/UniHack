@@ -11,9 +11,9 @@
 4||10|c|G
 4||10|C|G
 4||10|T|G</Grants>
-      <IntrospectionStateNumber>741</IntrospectionStateNumber>
+      <IntrospectionStateNumber>749</IntrospectionStateNumber>
       <ServerVersion>15.13</ServerVersion>
-      <StartupTime>1752692651</StartupTime>
+      <StartupTime>1753054443</StartupTime>
       <TimeZones>true ACDT
 true ACSST
 false ACST
@@ -1414,7 +1414,7 @@ true posixrules
 13209||10|C|G
 13209||-9223372036854775808|U|G
 13209||10|U|G</Grants>
-      <IntrospectionStateNumber>741</IntrospectionStateNumber>
+      <IntrospectionStateNumber>749</IntrospectionStateNumber>
       <ObjectId>16384</ObjectId>
       <OwnerName>postgres</OwnerName>
     </database>
@@ -4827,15 +4827,15 @@ true posixrules
     <schema id="262" parent="3" name="public">
       <Comment>standard public schema</Comment>
       <Current>1</Current>
-      <IntrospectionStateNumber>741</IntrospectionStateNumber>
-      <LastIntrospectionLocalTimestamp>2025-07-16.19:28:59</LastIntrospectionLocalTimestamp>
+      <IntrospectionStateNumber>749</IntrospectionStateNumber>
+      <LastIntrospectionLocalTimestamp>2025-07-20.23:35:40</LastIntrospectionLocalTimestamp>
       <ObjectId>2200</ObjectId>
       <StateNumber>518</StateNumber>
       <OwnerName>pg_database_owner</OwnerName>
     </schema>
     <table id="263" parent="262" name="challenges">
       <ObjectId>16385</ObjectId>
-      <StateNumber>726</StateNumber>
+      <StateNumber>748</StateNumber>
       <AccessMethodId>2</AccessMethodId>
       <OwnerName>postgres</OwnerName>
     </table>
@@ -4867,8 +4867,8 @@ true posixrules
     <column id="268" parent="263" name="description">
       <NotNull>1</NotNull>
       <Position>2</Position>
-      <StateNumber>726</StateNumber>
-      <StoredType>varchar(255)|0s</StoredType>
+      <StateNumber>746</StateNumber>
+      <StoredType>varchar(2048)|0s</StoredType>
       <TypeId>1043</TypeId>
     </column>
     <column id="269" parent="263" name="difficulty">
@@ -4892,7 +4892,21 @@ true posixrules
       <StoredType>varchar(255)|0s</StoredType>
       <TypeId>1043</TypeId>
     </column>
-    <index id="272" parent="263" name="challenges_pkey">
+    <column id="272" parent="263" name="docker_image">
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StateNumber>747</StateNumber>
+      <StoredType>varchar(255)|0s</StoredType>
+      <TypeId>1043</TypeId>
+    </column>
+    <column id="273" parent="263" name="flag">
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StateNumber>748</StateNumber>
+      <StoredType>varchar(255)|0s</StoredType>
+      <TypeId>1043</TypeId>
+    </column>
+    <index id="274" parent="263" name="challenges_pkey">
       <ColNames>id</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <ObjectId>16392</ObjectId>
@@ -4901,68 +4915,68 @@ true posixrules
       <Unique>1</Unique>
       <AccessMethodId>403</AccessMethodId>
     </index>
-    <key id="273" parent="263" name="challenges_pkey">
+    <key id="275" parent="263" name="challenges_pkey">
       <NameSurrogate>1</NameSurrogate>
       <ObjectId>16393</ObjectId>
       <Primary>1</Primary>
       <StateNumber>726</StateNumber>
       <UnderlyingIndexId>16392</UnderlyingIndexId>
     </key>
-    <check id="274" parent="264" name="users_role_check">
+    <check id="276" parent="264" name="users_role_check">
       <ColNames>role</ColNames>
       <ObjectId>16398</ObjectId>
       <Predicate>(role)::text = ANY ((ARRAY[&apos;ADMIN&apos;::character varying, &apos;USER&apos;::character varying])::text[])</Predicate>
       <StateNumber>727</StateNumber>
     </check>
-    <check id="275" parent="264" name="users_points_check">
+    <check id="277" parent="264" name="users_points_check">
       <ColNames>points</ColNames>
       <ObjectId>16397</ObjectId>
       <Predicate>points &gt;= 0</Predicate>
       <StateNumber>727</StateNumber>
     </check>
-    <column id="276" parent="264" name="id">
+    <column id="278" parent="264" name="id">
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StateNumber>727</StateNumber>
       <StoredType>uuid|0s</StoredType>
       <TypeId>2950</TypeId>
     </column>
-    <column id="277" parent="264" name="matricula">
+    <column id="279" parent="264" name="matricula">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StateNumber>727</StateNumber>
       <StoredType>varchar(255)|0s</StoredType>
       <TypeId>1043</TypeId>
     </column>
-    <column id="278" parent="264" name="password">
+    <column id="280" parent="264" name="password">
       <NotNull>1</NotNull>
       <Position>3</Position>
       <StateNumber>727</StateNumber>
       <StoredType>varchar(255)|0s</StoredType>
       <TypeId>1043</TypeId>
     </column>
-    <column id="279" parent="264" name="points">
+    <column id="281" parent="264" name="points">
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StateNumber>727</StateNumber>
       <StoredType>integer|0s</StoredType>
       <TypeId>23</TypeId>
     </column>
-    <column id="280" parent="264" name="role">
+    <column id="282" parent="264" name="role">
       <NotNull>1</NotNull>
       <Position>5</Position>
       <StateNumber>727</StateNumber>
       <StoredType>varchar(255)|0s</StoredType>
       <TypeId>1043</TypeId>
     </column>
-    <column id="281" parent="264" name="username">
+    <column id="283" parent="264" name="username">
       <NotNull>1</NotNull>
       <Position>6</Position>
       <StateNumber>727</StateNumber>
       <StoredType>varchar(255)|0s</StoredType>
       <TypeId>1043</TypeId>
     </column>
-    <index id="282" parent="264" name="users_pkey">
+    <index id="284" parent="264" name="users_pkey">
       <ColNames>id</ColNames>
       <NameSurrogate>1</NameSurrogate>
       <ObjectId>16401</ObjectId>
@@ -4971,7 +4985,7 @@ true posixrules
       <Unique>1</Unique>
       <AccessMethodId>403</AccessMethodId>
     </index>
-    <index id="283" parent="264" name="ukr43af9ap4edm43mmtq01oddj6">
+    <index id="285" parent="264" name="ukr43af9ap4edm43mmtq01oddj6">
       <ColNames>username</ColNames>
       <ObjectId>16403</ObjectId>
       <StateNumber>729</StateNumber>
@@ -4981,14 +4995,14 @@ true posixrules
       <CollationIds>100</CollationIds>
       <CollationParentNames>pg_catalog</CollationParentNames>
     </index>
-    <key id="284" parent="264" name="users_pkey">
+    <key id="286" parent="264" name="users_pkey">
       <NameSurrogate>1</NameSurrogate>
       <ObjectId>16402</ObjectId>
       <Primary>1</Primary>
       <StateNumber>727</StateNumber>
       <UnderlyingIndexId>16401</UnderlyingIndexId>
     </key>
-    <key id="285" parent="264" name="ukr43af9ap4edm43mmtq01oddj6">
+    <key id="287" parent="264" name="ukr43af9ap4edm43mmtq01oddj6">
       <ObjectId>16404</ObjectId>
       <StateNumber>729</StateNumber>
       <UnderlyingIndexId>16403</UnderlyingIndexId>
