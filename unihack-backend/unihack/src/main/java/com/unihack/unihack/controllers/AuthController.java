@@ -65,13 +65,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginDto loginDto) { //
+    public ResponseEntity<?> login(@Valid @RequestBody LoginDto loginDto) {
         try {
-            // Tenta autenticar o usuário com matrícula e senha
+
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            loginDto.getMatricula(), //
-                            loginDto.getPassword() //
+                            loginDto.getMatricula(),
+                            loginDto.getPassword()
                     )
             );
 

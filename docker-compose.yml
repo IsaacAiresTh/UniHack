@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_DB: unihack
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      - POSTGRES_DB=unihack
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     ports:
       - "5433:5432"
     volumes:
@@ -13,17 +13,23 @@ services:
 
   backend:
     build:
-      context: ./unihack-backend/unihack # Verifique se este é o caminho correto para o seu backend
+      context: ./unihack-backend/unihack
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
     depends_on:
       - db
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/unihack
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      # Variável que diz ao Java onde encontrar o Docker Engine
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/unihack
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     restart: always
+    volumes:
+      # O mapeamento do socket do Docker está no sítio correto
+      - /var/run/docker.sock:/var/run/docker.sock
 
   desafio-sqli:
     build:
@@ -37,9 +43,10 @@ services:
   sqli-db:
     image: mysql:5.7
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      - MYSQL_ROOT_PASSWORD=root
     volumes:
       - ./desafios/sqli/db:/docker-entrypoint-initdb.d
 
 volumes:
   db-data:
+

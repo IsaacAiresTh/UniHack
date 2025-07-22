@@ -23,7 +23,7 @@ public class Challenge {
     private String title;
 
     @NotBlank(message = "Description is required")
-    @Column(length = 2048) // Aumenta o tamanho máximo da descrição
+    @Column(length = 2048)
     private String description;
 
     @Enumerated(EnumType.STRING)
