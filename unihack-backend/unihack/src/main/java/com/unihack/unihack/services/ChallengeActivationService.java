@@ -52,6 +52,7 @@ public class ChallengeActivationService {
             container = dockerClient.createContainerCmd(dockerImageName)
                     .withExposedPorts(internalPort)
                     .withHostConfig(hostConfig)
+                    .withNetworkMode("unihack_unihack-net") // <-- ADICIONEI ESTA LINHA IMPORTANTE
                     .exec();
             logger.info("Contentor criado com sucesso. ID: {}", container.getId());
         } catch (Exception e) {
@@ -63,21 +64,36 @@ public class ChallengeActivationService {
         dockerClient.startContainerCmd(containerId).exec();
         logger.info("Comando para iniciar o contentor {} enviado.", containerId);
 
-        // --- LÓGICA DE VERIFICAÇÃO DE PORTA MAIS ROBUSTA ---
-        InspectContainerResponse inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
-        Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
+        // --- LÓGICA DE VERIFICAÇÃO DE PORTA MAIS ROBUSTA COM TENTATIVAS ---
+        String publicPort = null;
+        int maxRetries = 5; // Tenta por até 2.5 segundos
+        int retryCount = 0;
 
-        if (bindings == null || bindings.length == 0) {
-            logger.error("FALHA: O contentor {} iniciou, mas não foi possível encontrar o mapeamento da porta.", containerId);
-            stopContainer(containerId); // Tenta parar o contentor para não o deixar órfão
-            throw new RuntimeException("Falha ao obter a porta de acesso do desafio.");
+        while (publicPort == null && retryCount < maxRetries) {
+            try {
+                Thread.sleep(500); // Espera 500 milissegundos
+                retryCount++;
+                logger.info("Tentando obter a porta, tentativa {}...", retryCount);
+
+                InspectContainerResponse inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
+                Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
+
+                if (bindings != null && bindings.length > 0 && bindings[0].getHostPortSpec() != null) {
+                    publicPort = bindings[0].getHostPortSpec();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("Thread interrompida enquanto esperava pela porta do contêiner.", e);
+                break;
+            } catch (Exception e) {
+                logger.error("Erro ao inspecionar o contêiner na tentativa {}", retryCount, e);
+            }
         }
 
-        String publicPort = bindings[0].getHostPortSpec();
         if (publicPort == null || publicPort.isEmpty()) {
-            logger.error("FALHA: O mapeamento da porta para o contentor {} existe, mas a porta pública é nula ou vazia.", containerId);
-            stopContainer(containerId);
-            throw new RuntimeException("Falha ao ler a porta de acesso do desafio.");
+            logger.error("FALHA: O contentor {} iniciou, mas não foi possível encontrar o mapeamento da porta após {} tentativas.", containerId, maxRetries);
+            stopContainer(containerId); // Tenta parar o contêiner para não o deixar órfão
+            throw new RuntimeException("Falha ao obter a porta de acesso do desafio.");
         }
 
         String accessUrl = serverPublicAddress + ":" + publicPort;

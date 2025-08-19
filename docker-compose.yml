@@ -10,6 +10,8 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     restart: always
+    networks: # Adicionado
+      - unihack-net
 
   backend:
     build:
@@ -20,25 +22,24 @@ services:
     depends_on:
       - db
     environment:
-      # Variável que diz ao Java onde encontrar o Docker Engine
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      - DOCKER_HOST=tcp://host.docker.internal:2375 # Mantém a correção anterior
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/unihack
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     restart: always
     volumes:
-      # O mapeamento do socket do Docker está no sítio correto
       - /var/run/docker.sock:/var/run/docker.sock
+    networks: # Adicionado
+      - unihack-net
 
+  # Este serviço agora só serve para construir a imagem.
+  # A API vai iniciar os contêineres de desafio.
   desafio-sqli:
     build:
       context: ./desafios/sqli
       dockerfile: Dockerfile
-    ports:
-      - "3001:80"
-    depends_on:
-      - sqli-db
+    image: desafio-sqli:latest
 
   sqli-db:
     image: mysql:5.7
@@ -46,7 +47,12 @@ services:
       - MYSQL_ROOT_PASSWORD=root
     volumes:
       - ./desafios/sqli/db:/docker-entrypoint-initdb.d
+    networks: # Adicionado
+      - unihack-net
 
 volumes:
   db-data:
 
+networks: # Adicionado
+  unihack-net:
+    driver: bridge
