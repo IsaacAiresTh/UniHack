@@ -11,6 +11,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -44,8 +45,8 @@ public class GlobalExceptions extends ResponseEntityExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Object> handleUserNotFoundException(UserNotFoundException ex, WebRequest request) {
         Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", System.currentTimeMillis());
-        body.put("status", HttpStatus.NOT_FOUND.value()); // 404 Not Found
+        body.put("timestamp", Optional.of(System.currentTimeMillis()));
+        body.put("status", Optional.of(HttpStatus.NOT_FOUND.value())); // 404 Not Found
         body.put("error", "Not Found");
         body.put("message", ex.getMessage());
         body.put("path", request.getDescription(false).replace("uri=", ""));
@@ -56,8 +57,8 @@ public class GlobalExceptions extends ResponseEntityExceptionHandler {
     @ExceptionHandler(UsernameAlreadyExistsException.class)
     public ResponseEntity<Object> handleUsernameAlreadyExistsException(UsernameAlreadyExistsException ex, WebRequest request) {
         Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", System.currentTimeMillis());
-        body.put("status", HttpStatus.CONFLICT.value()); // 409 Conflict
+        body.put("timestamp", Optional.of(System.currentTimeMillis()));
+        body.put("status", Optional.of(HttpStatus.CONFLICT.value())); // 409 Conflict
         body.put("error", "Conflict");
         body.put("message", ex.getMessage());
         body.put("path", request.getDescription(false).replace("uri=", ""));

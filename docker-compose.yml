@@ -41,6 +41,14 @@ services:
       dockerfile: Dockerfile
     image: desafio-sqli:latest
 
+
+  desafio-xss:
+    build:
+      context: ./desafios/xss
+      dockerfile: Dockerfile
+    image: desafio-xss:latest
+    
+
   sqli-db:
     image: mysql:5.7
     environment:
