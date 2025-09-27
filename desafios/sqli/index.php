@@ -37,8 +37,8 @@ if (isset($_GET['user']) && isset($_GET['pass'])) {
         <h1>NeoBank</h1>
         <h2>Top-Secret</h2>
         <form method="GET" action="">
-            <input type="text" name="user" placeholder="Usuário" required>
-            <input type="password" name="pass" placeholder="Senha" required>
+            <input type="text" name="user" placeholder="Usuário" required autocomplete="off">
+            <input type="password" name="pass" placeholder="Senha" required autocomplete="off">
             <button type="submit">Entrar</button>
         </form>
     </div>

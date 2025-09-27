@@ -1,0 +1,12 @@
+{
+  "name": "desafio-xss",
+  "version": "1.0.0",
+  "description": "Desafio de XSS Refletido para UniHack",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

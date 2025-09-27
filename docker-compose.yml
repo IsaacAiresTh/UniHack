@@ -41,6 +41,33 @@ services:
       dockerfile: Dockerfile
     image: desafio-sqli:latest
 
+
+  desafio-xss:
+    build:
+      context: ./desafios/xss
+      dockerfile: Dockerfile
+    image: desafio-xss:latest
+
+  desafio-fonte-secreta:
+    build:
+      context: ./desafios/fonte-secreta
+      dockerfile: Dockerfile
+    image: desafio-fonte-secreta:latest
+
+  
+  desafio-cmd-injection:
+    build:
+      context: ./desafios/command-injection
+      dockerfile: Dockerfile
+    image: desafio-cmd-injection:latest
+
+  desafio-jwt-inseguro:
+    build:
+      context: ./desafios/jwt-inseguro
+      dockerfile: Dockerfile
+    image: desafio-jwt-inseguro:latest
+    
+
   sqli-db:
     image: mysql:5.7
     environment:

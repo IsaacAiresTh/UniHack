@@ -1,0 +1,1 @@
+FLAG{jwt_forjado_com_sucesso}

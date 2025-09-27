@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class ChallengeActivationService {
@@ -45,7 +46,7 @@ public class ChallengeActivationService {
 
         HostConfig hostConfig = HostConfig.newHostConfig()
                 .withPortBindings(portBindings)
-                .withAutoRemove(true);
+                .withAutoRemove(Boolean.valueOf(true));
 
         CreateContainerResponse container;
         try {
@@ -73,7 +74,7 @@ public class ChallengeActivationService {
             try {
                 Thread.sleep(500); // Espera 500 milissegundos
                 retryCount++;
-                logger.info("Tentando obter a porta, tentativa {}...", retryCount);
+                logger.info("Tentando obter a porta, tentativa {}...", Optional.of(retryCount));
 
                 InspectContainerResponse inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
                 Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
@@ -86,12 +87,12 @@ public class ChallengeActivationService {
                 logger.error("Thread interrompida enquanto esperava pela porta do contêiner.", e);
                 break;
             } catch (Exception e) {
-                logger.error("Erro ao inspecionar o contêiner na tentativa {}", retryCount, e);
+                logger.error("Erro ao inspecionar o contêiner na tentativa {}", Optional.of(retryCount), e);
             }
         }
 
         if (publicPort == null || publicPort.isEmpty()) {
-            logger.error("FALHA: O contentor {} iniciou, mas não foi possível encontrar o mapeamento da porta após {} tentativas.", containerId, maxRetries);
+            logger.error("FALHA: O contentor {} iniciou, mas não foi possível encontrar o mapeamento da porta após {} tentativas.", (Object) containerId, (Object) maxRetries);
             stopContainer(containerId); // Tenta parar o contêiner para não o deixar órfão
             throw new RuntimeException("Falha ao obter a porta de acesso do desafio.");
         }
