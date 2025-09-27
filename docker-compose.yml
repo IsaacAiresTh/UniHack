@@ -47,6 +47,12 @@ services:
       context: ./desafios/xss
       dockerfile: Dockerfile
     image: desafio-xss:latest
+
+  desafio-fonte-secreta:
+    build:
+      context: ./desafios/fonte-secreta
+      dockerfile: Dockerfile
+    image: desafio-fonte-secreta:latest
     
 
   sqli-db:
