@@ -53,6 +53,19 @@ services:
       context: ./desafios/fonte-secreta
       dockerfile: Dockerfile
     image: desafio-fonte-secreta:latest
+
+  
+  desafio-cmd-injection:
+    build:
+      context: ./desafios/command-injection
+      dockerfile: Dockerfile
+    image: desafio-cmd-injection:latest
+
+  desafio-jwt-inseguro:
+    build:
+      context: ./desafios/jwt-inseguro
+      dockerfile: Dockerfile
+    image: desafio-jwt-inseguro:latest
     
 
   sqli-db:
