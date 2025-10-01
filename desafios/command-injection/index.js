@@ -24,7 +24,7 @@ const htmlTemplate = (result = '') => `
         <div class="container">
             <h1>Diagnóstico de Ping</h1>
             <form action="/" method="POST">
-                <input type="text" name="ip" placeholder="Digite um endereço IP (ex: 8.8.8.8)">
+                <input type="text" name="ip" placeholder="Digite um endereço IP (ex: 8.8.8.8)" autocomplete="off" required />
                 <button type="submit">Pingar</button>
             </form>
             ${result ? `<h3>Resultado:</h3><pre>${result}</pre>` : ''}
