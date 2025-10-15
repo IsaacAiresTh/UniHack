@@ -1,50 +1,101 @@
 package com.unihack.unihack.models;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.GenericGenerator;
-
 import java.util.UUID;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "challenges")
 public class Challenge {
-
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @NotBlank(message = "Title is required")
+    @Column(nullable = false, unique = true)
     private String title;
 
-    @NotBlank(message = "Description is required")
-    @Column(length = 2048)
+    // --- CORREÇÃO 1: Aumentar o tamanho da coluna description ---
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Difficulty difficulty;
+    private String difficulty;
 
-    @Min(value = 10, message = "Score must be a positive number")
+    @Column(nullable = false)
     private int score;
 
-    // --- NOVOS CAMPOS ADICIONADOS ---
-
-    @NotBlank(message = "Docker image is required")
-    @Column(name = "docker_image") // Mapeia para a coluna 'docker_image' no banco
+    @Column(nullable = false)
     private String dockerImage;
 
-    @NotBlank(message = "Flag is required")
+    @Column(nullable = false)
     private String flag;
 
-    // --- FIM DOS NOVOS CAMPOS ---
+    // --- CORREÇÃO 2: Permitir que a categoria seja nula temporariamente ---
+    @Column
+    private String category;
 
-    public enum Difficulty {
-        EASY, MEDIUM, HARD
+    // Getters e Setters (não precisam de alteração)
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(String difficulty) {
+        this.difficulty = difficulty;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    public String getDockerImage() {
+        return dockerImage;
+    }
+
+    public void setDockerImage(String dockerImage) {
+        this.dockerImage = dockerImage;
+    }
+
+    public String getFlag() {
+        return flag;
+    }
+
+    public void setFlag(String flag) {
+        this.flag = flag;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 }

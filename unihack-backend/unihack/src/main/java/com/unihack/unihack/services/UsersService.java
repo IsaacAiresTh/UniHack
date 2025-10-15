@@ -1,27 +1,44 @@
 package com.unihack.unihack.services;
 
+import com.unihack.unihack.dtos.UserProfileDTO;
+import com.unihack.unihack.dtos.UserStatsDTO;
 import com.unihack.unihack.exceptions.UserNotFoundException;
+import com.unihack.unihack.models.CompletedChallenge;
 import com.unihack.unihack.models.User;
+import com.unihack.unihack.repository.ChallengeRepository;
+import com.unihack.unihack.repository.CompletedChallengeRepository;
 import com.unihack.unihack.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class UsersService {
 
     private final UserRepository userRepository;
+    // Novas dependências injetadas
+    private final ChallengeRepository challengeRepository;
+    private final CompletedChallengeRepository completedChallengeRepository;
 
     @Autowired
-    public UsersService(UserRepository userRepository) {
+    public UsersService(UserRepository userRepository, ChallengeRepository challengeRepository, CompletedChallengeRepository completedChallengeRepository) {
         this.userRepository = userRepository;
+        this.challengeRepository = challengeRepository;
+        this.completedChallengeRepository = completedChallengeRepository;
     }
+
+    // ===============================================================
+    // SEUS MÉTODOS EXISTENTES (INTACTOS)
+    // ===============================================================
 
     @Transactional
     public User createUser(User user) {
-        // Validações e lógica de codificação de senha podem ser adicionadas aqui
         return userRepository.save(user);
     }
 
@@ -35,7 +52,6 @@ public class UsersService {
 
     @Transactional
     public User updateUser(User user) {
-        // O método save() do JpaRepository funciona como update se o ID do objeto já existir no banco.
         return userRepository.save(user);
     }
 
@@ -57,5 +73,60 @@ public class UsersService {
             throw new UserNotFoundException("User not found with id: " + id + ". Cannot delete.");
         }
         userRepository.deleteById(id);
+    }
+
+    // ===============================================================
+    // --- NOVOS MÉTODOS PARA PERFIL E RANKING (CORRIGIDOS) ---
+    // ===============================================================
+
+    @Transactional(readOnly = true)
+    public List<User> getUsersForRanking() {
+        return userRepository.findAllByOrderByPointsDesc();
+    }
+
+    @Transactional(readOnly = true)
+    public UserProfileDTO getUserProfileByUsername(String username) {
+        // CORREÇÃO APLICADA: Usando findByMatricula, que existe no seu repositório.
+        // O "username" que vem do token de segurança é, na verdade, a matrícula.
+        User user = userRepository.findByMatricula(username)
+                .orElseThrow(() -> new UserNotFoundException("User not found with matricula: " + username));
+
+        UserProfileDTO profileDTO = new UserProfileDTO(user);
+        profileDTO.setStats(calculateUserStats(user));
+        return profileDTO;
+    }
+
+    private UserStatsDTO calculateUserStats(User user) {
+        UserStatsDTO statsDTO = new UserStatsDTO();
+        long totalChallenges = challengeRepository.count();
+        List<CompletedChallenge> completedChallenges = completedChallengeRepository.findByUser(user);
+        long completedCount = completedChallenges.size();
+
+        statsDTO.setTotalChallenges(totalChallenges);
+        statsDTO.setCompletedChallenges(completedCount);
+
+        if (totalChallenges > 0) {
+            double progress = ((double) completedCount / totalChallenges) * 100;
+            statsDTO.setProgressPercentage(Math.round(progress * 100.0) / 100.0);
+        } else {
+            statsDTO.setProgressPercentage(0);
+        }
+
+        if (!completedChallenges.isEmpty()) {
+            // CORREÇÃO APLICADA: Agora o .getCategory() vai funcionar porque adicionamos o campo no model Challenge.
+            Map<String, Long> categoryCounts = completedChallenges.stream()
+                    .map(completed -> completed.getChallenge().getCategory())
+                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+            String favoriteCategory = categoryCounts.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse("N/A");
+
+            statsDTO.setFavoriteCategory(favoriteCategory);
+        } else {
+            statsDTO.setFavoriteCategory("N/A");
+        }
+        return statsDTO;
     }
 }
