@@ -3,12 +3,11 @@ package com.unihack.unihack.services;
 import com.unihack.unihack.dtos.UserProfileDTO;
 import com.unihack.unihack.dtos.UserStatsDTO;
 import com.unihack.unihack.exceptions.UserNotFoundException;
-import com.unihack.unihack.models.CompletedChallenge;
+import com.unihack.unihack.models.SolvedChallenge;
 import com.unihack.unihack.models.User;
 import com.unihack.unihack.repository.ChallengeRepository;
-import com.unihack.unihack.repository.CompletedChallengeRepository;
+import com.unihack.unihack.repository.SolvedChallengeRepository;
 import com.unihack.unihack.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,20 +21,17 @@ import java.util.stream.Collectors;
 public class UsersService {
 
     private final UserRepository userRepository;
-    // Novas dependências injetadas
     private final ChallengeRepository challengeRepository;
-    private final CompletedChallengeRepository completedChallengeRepository;
+    private final SolvedChallengeRepository solvedChallengeRepository;
 
-    @Autowired
-    public UsersService(UserRepository userRepository, ChallengeRepository challengeRepository, CompletedChallengeRepository completedChallengeRepository) {
+    public UsersService(
+            UserRepository userRepository,
+            ChallengeRepository challengeRepository,
+            SolvedChallengeRepository solvedChallengeRepository) {
         this.userRepository = userRepository;
         this.challengeRepository = challengeRepository;
-        this.completedChallengeRepository = completedChallengeRepository;
+        this.solvedChallengeRepository = solvedChallengeRepository;
     }
-
-    // ===============================================================
-    // SEUS MÉTODOS EXISTENTES (INTACTOS)
-    // ===============================================================
 
     @Transactional
     public User createUser(User user) {
@@ -75,10 +71,6 @@ public class UsersService {
         userRepository.deleteById(id);
     }
 
-    // ===============================================================
-    // --- NOVOS MÉTODOS PARA PERFIL E RANKING (CORRIGIDOS) ---
-    // ===============================================================
-
     @Transactional(readOnly = true)
     public List<User> getUsersForRanking() {
         return userRepository.findAllByOrderByPointsDesc();
@@ -86,8 +78,6 @@ public class UsersService {
 
     @Transactional(readOnly = true)
     public UserProfileDTO getUserProfileByUsername(String username) {
-        // CORREÇÃO APLICADA: Usando findByMatricula, que existe no seu repositório.
-        // O "username" que vem do token de segurança é, na verdade, a matrícula.
         User user = userRepository.findByMatricula(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found with matricula: " + username));
 
@@ -99,31 +89,30 @@ public class UsersService {
     private UserStatsDTO calculateUserStats(User user) {
         UserStatsDTO statsDTO = new UserStatsDTO();
         long totalChallenges = challengeRepository.count();
-        List<CompletedChallenge> completedChallenges = completedChallengeRepository.findByUser(user);
-        long completedCount = completedChallenges.size();
+        List<SolvedChallenge> solved = solvedChallengeRepository.findByUser(user);
+        long solvedCount = solved.size();
 
         statsDTO.setTotalChallenges(totalChallenges);
-        statsDTO.setCompletedChallenges(completedCount);
+        statsDTO.setCompletedChallenges(solvedCount);
 
         if (totalChallenges > 0) {
-            double progress = ((double) completedCount / totalChallenges) * 100;
+            double progress = ((double) solvedCount / totalChallenges) * 100;
             statsDTO.setProgressPercentage(Math.round(progress * 100.0) / 100.0);
         } else {
             statsDTO.setProgressPercentage(0);
         }
 
-        if (!completedChallenges.isEmpty()) {
-            // CORREÇÃO APLICADA: Agora o .getCategory() vai funcionar porque adicionamos o campo no model Challenge.
-            Map<String, Long> categoryCounts = completedChallenges.stream()
-                    .map(completed -> completed.getChallenge().getCategory())
+        if (!solved.isEmpty()) {
+            Map<String, Long> categoryCounts = solved.stream()
+                    .map(s -> s.getChallenge().getCategory())
+                    .filter(c -> c != null && !c.isBlank())
                     .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-            String favoriteCategory = categoryCounts.entrySet().stream()
-                    .max(Map.Entry.comparingByValue())
-                    .map(Map.Entry::getKey)
-                    .orElse("N/A");
-
-            statsDTO.setFavoriteCategory(favoriteCategory);
+            statsDTO.setFavoriteCategory(
+                    categoryCounts.entrySet().stream()
+                            .max(Map.Entry.comparingByValue())
+                            .map(Map.Entry::getKey)
+                            .orElse("N/A"));
         } else {
             statsDTO.setFavoriteCategory("N/A");
         }

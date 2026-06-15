@@ -1,0 +1,117 @@
+services:
+
+  # ── INFRAESTRUTURA ────────────────────────────────────────────────────
+
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik-dev
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --log.level=ERROR
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - unihack-net
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=unihack
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5433:5432"
+    networks:
+      - unihack-net
+
+  sqli-db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=sqli
+    volumes:
+      - ./desafios/sqli/db:/docker-entrypoint-initdb.d
+    networks:
+      - unihack-net
+
+  # ── DESAFIOS ─────────────────────────────────────────────────────────
+
+  desafio-sqli:
+    build:
+      context: ./desafios/sqli
+      dockerfile: Dockerfile
+    depends_on:
+      - sqli-db
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sqli.rule=PathPrefix(`/lab/sqli`)
+      - traefik.http.routers.sqli.entrypoints=web
+      - traefik.http.middlewares.sqli-strip.stripprefix.prefixes=/lab/sqli
+      - traefik.http.routers.sqli.middlewares=sqli-strip
+      - traefik.http.services.sqli.loadbalancer.server.port=80
+    networks:
+      - unihack-net
+
+  desafio-xss:
+    build:
+      context: ./desafios/xss
+      dockerfile: Dockerfile
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.xss.rule=PathPrefix(`/lab/xss`)
+      - traefik.http.routers.xss.entrypoints=web
+      - traefik.http.middlewares.xss-strip.stripprefix.prefixes=/lab/xss
+      - traefik.http.routers.xss.middlewares=xss-strip
+      - traefik.http.services.xss.loadbalancer.server.port=80
+    networks:
+      - unihack-net
+
+  desafio-fonte-secreta:
+    build:
+      context: ./desafios/fonte-secreta
+      dockerfile: Dockerfile
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.fonte-secreta.rule=PathPrefix(`/lab/fonte-secreta`)
+      - traefik.http.routers.fonte-secreta.entrypoints=web
+      - traefik.http.middlewares.fonte-strip.stripprefix.prefixes=/lab/fonte-secreta
+      - traefik.http.routers.fonte-secreta.middlewares=fonte-strip
+      - traefik.http.services.fonte-secreta.loadbalancer.server.port=80
+    networks:
+      - unihack-net
+
+  desafio-cmd-injection:
+    build:
+      context: ./desafios/command-injection
+      dockerfile: Dockerfile
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cmd-injection.rule=PathPrefix(`/lab/cmd-injection`)
+      - traefik.http.routers.cmd-injection.entrypoints=web
+      - traefik.http.middlewares.cmd-strip.stripprefix.prefixes=/lab/cmd-injection
+      - traefik.http.routers.cmd-injection.middlewares=cmd-strip
+      - traefik.http.services.cmd-injection.loadbalancer.server.port=80
+    networks:
+      - unihack-net
+
+  desafio-jwt-inseguro:
+    build:
+      context: ./desafios/jwt-inseguro
+      dockerfile: Dockerfile
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jwt-inseguro.rule=PathPrefix(`/lab/jwt-inseguro`)
+      - traefik.http.routers.jwt-inseguro.entrypoints=web
+      - traefik.http.middlewares.jwt-strip.stripprefix.prefixes=/lab/jwt-inseguro
+      - traefik.http.routers.jwt-inseguro.middlewares=jwt-strip
+      - traefik.http.services.jwt-inseguro.loadbalancer.server.port=80
+    networks:
+      - unihack-net
+
+networks:
+  unihack-net:
+    driver: bridge

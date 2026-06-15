@@ -1,13 +1,12 @@
 package com.unihack.unihack.repository;
 
 import com.unihack.unihack.models.Challenge;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
 public interface ChallengeRepository extends JpaRepository<Challenge, UUID> {
 
-    Optional<Challenge> findByFlag(String flag);
+    Optional<Challenge> findByFlagHash(String flagHash);
 }

@@ -24,7 +24,7 @@ app.get('/', (req, res) => {
         <body>
             <div class="container">
                 <h1>Pesquisa de Documentos</h1>
-                <form action="/" method="GET">
+                <form method="GET">
                     <input type="text" name="search"  placeholder="Digite seu termo de busca..." required autocomplete="off">
                     <button type="submit">Buscar</button>
                 </form>
