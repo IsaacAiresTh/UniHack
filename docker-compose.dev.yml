@@ -25,6 +25,11 @@ services:
       - POSTGRES_PASSWORD=postgres
     ports:
       - "5433:5432"
+    volumes:
+      # Sem este volume os dados ficam na camada gravável do container e
+      # somem num `docker compose down` — junto com os desafios cadastrados
+      # e o usuário ADMIN, que são recriados na mão.
+      - db-dev-data:/var/lib/postgresql/data
     networks:
       - unihack-net
 
@@ -35,6 +40,48 @@ services:
       - MYSQL_DATABASE=sqli
     volumes:
       - ./desafios/sqli/db:/docker-entrypoint-initdb.d
+    networks:
+      - unihack-net
+
+  # ── APLICAÇÃO ────────────────────────────────────────────────────────
+
+  backend:
+    build:
+      context: ./unihack-backend/unihack
+      dockerfile: Dockerfile
+    environment:
+      # Dentro da rede do compose o Postgres atende em db:5432 — a porta 5433
+      # é só o mapeamento para o host, não vale aqui.
+      - DATABASE_URL=jdbc:postgresql://db:5432/unihack
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+    depends_on:
+      - db
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend.rule=PathPrefix(`/api`)
+      - traefik.http.routers.backend.entrypoints=web
+      # O backend expõe /auth, /challenges e /users na raiz, então o /api
+      # precisa ser removido antes de repassar a requisição.
+      - traefik.http.middlewares.api-strip.stripprefix.prefixes=/api
+      - traefik.http.routers.backend.middlewares=api-strip
+      - traefik.http.services.backend.loadbalancer.server.port=8080
+    networks:
+      - unihack-net
+
+  frontend:
+    build:
+      context: ../UniHackFrontend/unihack-frontend
+      dockerfile: Dockerfile
+    labels:
+      - traefik.enable=true
+      # Rota catch-all: pega tudo que não casou com /api nem /lab/*.
+      # A prioridade 1 (a mais baixa) garante que ela seja avaliada por
+      # último — sem isso o frontend engoliria as rotas do backend e dos labs.
+      - traefik.http.routers.frontend.rule=PathPrefix(`/`)
+      - traefik.http.routers.frontend.entrypoints=web
+      - traefik.http.routers.frontend.priority=1
+      - traefik.http.services.frontend.loadbalancer.server.port=80
     networks:
       - unihack-net
 
@@ -111,6 +158,9 @@ services:
       - traefik.http.services.jwt-inseguro.loadbalancer.server.port=80
     networks:
       - unihack-net
+
+volumes:
+  db-dev-data:
 
 networks:
   unihack-net:
