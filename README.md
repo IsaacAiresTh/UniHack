@@ -30,17 +30,20 @@ O UniHack usa um modelo de **instâncias compartilhadas por desafio**: cada labo
 Usuário (navegador)
         │
         ▼
-   Traefik v2.11  (reverse proxy)
-   ├── /api/*      ──► Backend Spring Boot  (porta 8080)
+   Traefik v2.11  (reverse proxy, porta 80/443)
+   ├── /api/*      ──► Backend Spring Boot  (porta 8080, prefixo removido)
    ├── /lab/sqli   ──► desafio-sqli         (porta 80)
    ├── /lab/xss    ──► desafio-xss          (porta 80)
    ├── /lab/fonte-secreta ──► desafio-fonte-secreta
    ├── /lab/cmd-injection ──► desafio-cmd-injection
-   └── /lab/jwt-inseguro  ──► desafio-jwt-inseguro
+   ├── /lab/jwt-inseguro  ──► desafio-jwt-inseguro
+   └── /*          ──► Frontend Angular     (nginx, prioridade mais baixa)
         │
    Backend ──► PostgreSQL  (banco principal)
    desafio-sqli ──► MySQL  (banco isolado do desafio)
 ```
+
+A rota do frontend é um catch-all (`PathPrefix('/')`) com `priority=1`, a mais baixa. Sem essa prioridade explícita ela engoliria `/api` e `/lab/*`, e nada além da página inicial funcionaria.
 
 **Flags** são armazenadas no banco como hash MD5 — nunca em texto puro. Na submissão, o backend faz o hash da entrada do usuário e compara. Submissões duplicadas são bloqueadas por uma constraint `UNIQUE(user_id, challenge_id)` na tabela `solved_challenges`.
 
@@ -62,10 +65,18 @@ Usuário (navegador)
 
 ## Estrutura do Repositório
 
+Os dois repositórios precisam ficar lado a lado — os composes referenciam o frontend por caminho relativo (`../UniHackFrontend/...`):
+
+```
+pasta-de-trabalho/
+├── UniHack/            # este repositório
+└── UniHackFrontend/    # repositório do frontend Angular
+```
+
 ```
 UniHack/
 ├── docker-compose.yml          # Produção (HTTPS, Let's Encrypt)
-├── docker-compose.dev.yml      # Desenvolvimento local (HTTP)
+├── docker-compose.dev.yml      # Desenvolvimento local (HTTP) — sobe tudo, 10 containers
 ├── .env.example                # Variáveis de ambiente necessárias em produção
 ├── desafios/
 │   ├── sqli/                   # PHP + MySQL — SQL Injection
@@ -128,60 +139,79 @@ git clone https://github.com/Isaac-code-maker/UniHack.git
 cd UniHack
 ```
 
-### 2. Suba a infraestrutura com Docker Compose
+### 2. Escolha o modo de execução
 
-O arquivo `docker-compose.dev.yml` sobe o Traefik, o PostgreSQL, o MySQL e todos os cinco laboratórios de desafio. Nenhuma variável de ambiente é necessária — tudo usa valores padrão para dev.
+O `docker-compose.dev.yml` sobe **tudo**: Traefik, PostgreSQL, MySQL, backend, frontend e os cinco laboratórios — 10 containers. Nenhuma variável de ambiente é necessária.
 
-> ⚠️ **O `-f docker-compose.dev.yml` é obrigatório.** Sem ele, o Docker Compose usa o `docker-compose.yml`, que é o de **produção** — ele exige um `.env`, um domínio público e o `Dockerfile` do frontend (que [ainda não existe](#limitações-conhecidas)). O build falha com:
->
-> ```
-> unable to prepare context: unable to evaluate symlinks in Dockerfile path:
-> lstat .../UniHackFrontend/unihack-frontend/Dockerfile: no such file or directory
-> ```
+Há dois modos, e a escolha depende do que você vai mexer:
+
+| | **Tudo em Docker** | **Híbrido (hot reload)** |
+|---|---|---|
+| Comando | `up -d` e pronto | `up -d` + `mvnw` + `npm start` |
+| Acesso | tudo em `http://localhost` | front em `:4200`, back em `:8080` |
+| Mudou o código | precisa rebuildar a imagem | recarrega sozinho |
+| Bom para | rodar a plataforma, testar o conjunto | desenvolver backend ou frontend |
+
+> ⚠️ **O `-f docker-compose.dev.yml` é obrigatório.** Sem ele, o Docker Compose usa o `docker-compose.yml`, que é o de **produção** — exige um `.env` e um domínio público com HTTPS, que não funciona em localhost.
+
+#### Modo A — tudo em Docker
 
 ```bash
 docker compose -f docker-compose.dev.yml up --build -d
 ```
 
-Verifique se os containers estão de pé:
+O primeiro build demora alguns minutos (o backend compila com Maven e o frontend roda `npm ci` dentro da imagem). Depois disso o cache de camadas deixa tudo rápido.
+
+Verifique:
 
 ```bash
 docker compose -f docker-compose.dev.yml ps
 ```
 
-Todos os **8** containers devem aparecer com status `running` (Traefik, PostgreSQL, MySQL e os 5 labs). O PostgreSQL fica acessível em `localhost:5433`.
+Os **10** containers devem aparecer com status `running`. O Traefik roteia tudo pela porta 80:
+
+| Caminho | Vai para |
+|---|---|
+| `http://localhost/` | frontend (Angular servido por nginx) |
+| `http://localhost/api/*` | backend (o prefixo `/api` é removido pelo Traefik) |
+| `http://localhost/lab/*` | containers dos desafios |
+
+O PostgreSQL fica em `localhost:5433` para inspeção.
 
 > Use sempre `-d`. Sem ele o compose fica anexado ao terminal e `Ctrl+C` **derruba todos os containers**. Para acompanhar os logs sem esse risco, veja [Acompanhando os logs](#acompanhando-os-logs).
 
-### 3. Rode o backend
+#### Modo B — híbrido, com hot reload
 
-Em outro terminal, dentro de `unihack-backend/unihack/`:
+Suba só a infraestrutura e os labs, deixando backend e frontend de fora:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d \
+  traefik db sqli-db \
+  desafio-sqli desafio-xss desafio-fonte-secreta \
+  desafio-cmd-injection desafio-jwt-inseguro
+```
+
+Backend, em outro terminal:
 
 ```bash
 cd unihack-backend/unihack
 ./mvnw spring-boot:run
-```
-
-O backend sobe em `http://localhost:8080`. Para confirmar:
-
-```bash
+# sobe em http://localhost:8080
 curl http://localhost:8080/auth/register -s -o /dev/null -w "%{http_code}"
 # Esperado: 400 (rota existe, mas sem body)
 ```
 
-### 4. Clone e rode o frontend
-
-O frontend está em um repositório separado. Após clonar:
+Frontend (repositório separado), em outro terminal:
 
 ```bash
-# No diretório do frontend
 npm install
 npm start
+# abre em http://localhost:4200
 ```
 
-A aplicação abre em `http://localhost:4200` (ou outra porta se 4200 estiver ocupada — o Angular exibirá a porta correta no terminal).
+Neste modo o frontend usa `environment.ts` (desenvolvimento), que aponta para `http://localhost:8080` e `http://localhost/lab` — endereços diretos, sem passar pelo `/api` do Traefik.
 
-### 5. Cadastre os desafios no banco
+### 3. Cadastre os desafios no banco
 
 > ⚠️ **Passo obrigatório.** Subir os containers **não** cadastra os desafios. Os labs e os registros na tabela `challenges` são coisas separadas: o Docker sobe os laboratórios, mas o banco começa vazio. Se pular esta etapa, a tela de CTFs mostra *"Nenhum desafio encontrado com os filtros atuais"* — mensagem enganosa, porque o problema não é filtro nem login, é banco vazio.
 
@@ -389,7 +419,7 @@ A tela de CTFs aparece vazia mesmo com login feito e todos os containers de pé.
 docker exec unihack-db-1 psql -U postgres -d unihack -c "SELECT count(*) FROM challenges;"
 ```
 
-Se retornar `0`, execute o passo [Cadastre os desafios no banco](#5-cadastre-os-desafios-no-banco).
+Se retornar `0`, execute o passo [Cadastre os desafios no banco](#3-cadastre-os-desafios-no-banco).
 
 ---
 
@@ -400,9 +430,29 @@ unable to prepare context: unable to evaluate symlinks in Dockerfile path:
 lstat .../UniHackFrontend/unihack-frontend/Dockerfile: no such file or directory
 ```
 
-**Causa:** você rodou `docker compose build` sem `-f`, e o Compose pegou o `docker-compose.yml` (produção), que referencia um `Dockerfile` de frontend que ainda não existe.
+**Causa:** o repositório do frontend não está clonado ao lado do backend. Ambos os composes esperam esta disposição:
 
-**Solução:** para desenvolvimento local, use sempre `-f docker-compose.dev.yml`. Os `WARN ... variable is not set` que aparecem junto são do mesmo problema — o compose de produção espera um `.env`.
+```
+pasta-de-trabalho/
+├── UniHack/            # este repositório
+└── UniHackFrontend/    # repositório do frontend
+```
+
+O `context: ../UniHackFrontend/unihack-frontend` sobe um nível a partir de `UniHack/`, então clonar o frontend dentro de outra pasta quebra o build.
+
+**Aparece junto:** vários `WARN ... variable is not set`. Isso indica que você rodou sem `-f` e o Compose pegou o `docker-compose.yml` (produção), que espera um `.env`. Para desenvolvimento local use sempre `-f docker-compose.dev.yml`.
+
+---
+
+### `Application bundle generation failed` — budget exceeded
+
+```
+✘ [ERROR] src/app/pages/perfil/perfil.component.scss exceeded maximum budget.
+```
+
+**Causa:** a configuração **production** do Angular impõe limites de tamanho que a **development** não impõe. Como `npm start` usa development, o problema só aparece ao buildar a imagem Docker.
+
+**Solução:** ajuste os `budgets` em `angular.json` (já foi feito neste repositório) ou reduza o CSS do componente citado.
 
 ---
 
@@ -428,22 +478,29 @@ docker exec unihack-db-1 psql -U postgres -d unihack \
 
 ### Os dados sumiram depois de um `docker compose down`
 
-**Causa:** o serviço `db` do `docker-compose.dev.yml` **não tem volume**. Os dados vivem na camada gravável do container, então `down` apaga usuários, desafios e pontuações. (O compose de produção *tem* volume — `db-data`.)
+Ambos os composes têm volume nomeado para o Postgres (`db-dev-data` em dev, `db-data` em produção), então um `down` comum **preserva** usuários, desafios e pontuações.
 
-**Contorno:** use `stop`/`start` em vez de `down`/`up` para preservar os dados entre sessões. Se derrubou mesmo, refaça o passo [Cadastre os desafios no banco](#5-cadastre-os-desafios-no-banco) e recrie o admin.
+**Se sumiram mesmo,** foi um destes:
 
-**Correção definitiva:** adicionar um volume ao serviço `db` no `docker-compose.dev.yml`:
+| Comando | Efeito |
+|---|---|
+| `docker compose down` | Remove containers. Volume **preservado**. |
+| `docker compose down -v` | Remove containers **e volumes**. Apaga tudo. |
+| `docker volume rm unihack_db-dev-data` | Apaga o banco de dev diretamente. |
 
-```yaml
-  db:
-    image: postgres:15
-    volumes:
-      - db-dev-data:/var/lib/postgresql/data
-    # ...
+O `-v` é o culpado quase sempre. Para recuperar, refaça o passo [Cadastre os desafios no banco](#3-cadastre-os-desafios-no-banco) e recrie o admin.
 
-volumes:
-  db-dev-data:
+**Backup e restauração** — vale antes de qualquer operação destrutiva:
+
+```bash
+# Backup
+docker exec unihack-db-1 pg_dump -U postgres -d unihack --clean --if-exists > backup.sql
+
+# Restauração
+docker exec -i unihack-db-1 psql -U postgres -d unihack < backup.sql
 ```
+
+> ⚠️ **Ao adicionar um volume a um banco que já tem dados**, o volume novo começa vazio e o Postgres inicializa um banco limpo — os dados antigos ficam órfãos na camada do container anterior. Faça o `pg_dump` **antes** de recriar o container e restaure depois.
 
 ---
 
@@ -467,12 +524,12 @@ Coisas que ainda não estão prontas — vale saber antes de gastar tempo invest
 
 | Item | Situação |
 |---|---|
-| `Dockerfile` do frontend | **Não existe.** O `docker-compose.yml` de produção referencia `UniHackFrontend/unihack-frontend/Dockerfile`, e o build falha sem ele. Há um exemplo em [Deploy em produção](#2-construa-o-frontend-para-produção). |
-| `nginx/nginx.conf` | Arquivo vazio (0 bytes). Precisa de fallback SPA (`try_files`) para as rotas do Angular funcionarem em deep link. |
 | Validação de username duplicado | Comentada em `AuthController.java` (bloco logo após a checagem de matrícula). O método `existsByUsername` **também não existe** no `UserRepository`, então descomentar sozinho não compila — é preciso adicionar `boolean existsByUsername(String username);` à interface. |
 | Painel admin | Não existe. Desafios só podem ser criados via `curl`/SQL. |
 | Interface do JWT Inseguro | O desafio é só API Flask, sem UI. |
 | Seed de desafios | Manual. Não há migration nem script versionado — o SQL está neste README. |
+| Budgets de CSS | `perfil.component.scss` (18 kB) e `ranking.component.scss` (8 kB) estouravam o limite padrão do Angular e **quebravam a build de produção**. Os budgets em `angular.json` foram afrouxados (erro em 24 kB) para destravar; o certo seria enxugar esses SCSS. |
+| `nginx/nginx.conf` (raiz) | Arquivo vazio e sem uso. O nginx do frontend usa `UniHackFrontend/unihack-frontend/nginx.conf`. Pode ser removido. |
 | Deploy em VPS | Ainda não foi feito. |
 
 ---
@@ -499,45 +556,25 @@ SQLI_DB_PASSWORD=outra_senha_forte
 JWT_SECRET=chave_aleatoria_longa_minimo_32_caracteres
 ```
 
-### 2. Construa o frontend para produção
+### 2. Confira o build do frontend
 
-> ⚠️ **Este passo é obrigatório e ainda não foi feito no repositório.** O `docker-compose.yml` referencia `UniHackFrontend/unihack-frontend/Dockerfile`, que não existe — sem criá-lo, o build de produção falha antes de qualquer outra coisa.
+Nada a fazer aqui — o `Dockerfile`, o `nginx.conf` e o `.dockerignore` já existem em `UniHackFrontend/unihack-frontend/`, e são os mesmos usados no compose de dev. Vale só entender três decisões, porque quebram de formas confusas se forem mexidas:
 
-Crie um `Dockerfile` em `UniHackFrontend/unihack-frontend/` que gere o build estático do Angular e o sirva com nginx:
+**1. O `COPY` termina em `/browser`.** O `outputPath` do `angular.json` é `dist/unihack-frontend`, mas o builder `application` do Angular 19 separa a saída do navegador em um subdiretório. Copiar `dist/unihack-frontend` direto serve a pasta errada e dá 404 em tudo.
 
-```dockerfile
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build -- --configuration=production
+**2. O `nginx.conf` tem fallback de SPA.** Sem o `try_files $uri $uri/ /index.html`, acessar `/ranking` direto (ou dar F5 fora da home) devolve 404 — o roteamento é do Angular, e o nginx procura um arquivo que não existe.
 
-FROM nginx:alpine
-COPY --from=build /app/dist/unihack-frontend/browser /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+**3. As URLs de produção são relativas.** O `angular.json` tem um `fileReplacements` que troca `environment.ts` por `environment.prod.ts` na configuração de produção:
+
+```typescript
+export const environment = {
+  production: true,
+  apiUrl: '/api',
+  labBaseUrl: '/lab',
+};
 ```
 
-O `outputPath` no `angular.json` é `dist/unihack-frontend`, e o Angular 19 coloca os arquivos do browser em um subdiretório `browser/` — por isso o caminho do `COPY` termina em `/browser`.
-
-O `nginx.conf` **precisa** do fallback para SPA, senão qualquer acesso direto a uma rota (`/ranking`, `/perfil`, ou um F5 fora da home) devolve 404, porque o roteamento é do Angular e o nginx procura um arquivo que não existe:
-
-```nginx
-server {
-    listen 80;
-    root /usr/share/nginx/html;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
-> O arquivo `nginx/nginx.conf` na raiz deste repositório está vazio (0 bytes) e não é usado por nenhum serviço do compose.
-
-Lembre também de apontar o `environment.ts` de produção para o domínio real (`https://SEU_DOMINIO` e `https://SEU_DOMINIO/lab`) — em produção o backend fica atrás de `/api`, diferente do dev.
+Isso é essencial. O `environment.ts` de desenvolvimento aponta para `http://localhost:8080`, que fica **assado no bundle** — se ele fosse usado no build de produção, a página serviria um JavaScript que tenta chamar `localhost:8080` no navegador de quem acessa, e nada funcionaria fora da sua máquina. Com caminhos relativos, o mesmo bundle serve qualquer domínio.
 
 ### 3. Suba com o compose de produção
 
@@ -557,7 +594,7 @@ docker exec -it unihack-db-1 \
   -c "UPDATE users SET role = 'ADMIN' WHERE matricula = 'SUA_MATRICULA';"
 ```
 
-E cadastre os desafios — o banco de produção também começa vazio. Use o SQL do passo [Cadastre os desafios no banco](#5-cadastre-os-desafios-no-banco), trocando `-U postgres` pelo `$POSTGRES_USER` do seu `.env`.
+E cadastre os desafios — o banco de produção também começa vazio. Use o SQL do passo [Cadastre os desafios no banco](#3-cadastre-os-desafios-no-banco), trocando `-U postgres` pelo `$POSTGRES_USER` do seu `.env`.
 
 ---
 
@@ -635,19 +672,30 @@ Todas as rotas (exceto `/auth/*`) exigem o header `Authorization: Bearer <token>
 
 ## Frontend
 
-O frontend Angular está em um repositório separado: [UniHackFrontend](https://github.com/Isaac-code-maker/UniHackFrontend).
+O frontend Angular está em um repositório separado: [UniHackFrontend](https://github.com/Isaac-code-maker/UniHackFrontend). **Clone-o ao lado do `UniHack/`**, não dentro — os dois composes referenciam `../UniHackFrontend/unihack-frontend`.
 
-Configure `src/environments/environment.ts` com:
+São dois arquivos de ambiente, e o Angular troca um pelo outro conforme a configuração de build (`fileReplacements` no `angular.json`):
 
-```typescript
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:8080',
-  labBaseUrl: 'http://localhost/lab',
-};
+| Arquivo | Usado em | `apiUrl` | `labBaseUrl` |
+|---|---|---|---|
+| `environment.ts` | `npm start` (development) | `http://localhost:8080` | `http://localhost/lab` |
+| `environment.prod.ts` | build de produção / imagem Docker | `/api` | `/lab` |
+
+O de desenvolvimento fala direto com o backend na porta 8080. O de produção usa caminhos relativos porque tudo passa pelo Traefik no mesmo domínio — assim o mesmo bundle funciona em localhost, em staging e no domínio real, sem rebuild.
+
+> Se você adicionar uma chave nova ao `environment.ts`, adicione também ao `environment.prod.ts`. O TypeScript não avisa quando um dos dois fica para trás, e o sintoma é `undefined` só em produção.
+
+Arquivos relacionados no repositório do frontend:
+
 ```
-
-Em produção, use `environment.prod.ts` com as URLs do domínio real.
+unihack-frontend/
+├── Dockerfile           # build multi-stage: npm ci → nginx:alpine
+├── nginx.conf           # fallback de SPA + cache dos assets
+├── .dockerignore        # evita mandar node_modules/dist no contexto
+└── src/environments/
+    ├── environment.ts
+    └── environment.prod.ts
+```
 
 ---
 
