@@ -14,6 +14,8 @@ Plataforma de **Capture The Flag (CTF)** desenvolvida para os alunos dos cursos 
 - [Criando o primeiro admin](#criando-o-primeiro-admin)
 - [Cadastrando desafios](#cadastrando-desafios)
 - [Testando o fluxo completo](#testando-o-fluxo-completo)
+- [Problemas comuns](#problemas-comuns)
+- [Limitações conhecidas](#limitações-conhecidas)
 - [Deploy em produção](#deploy-em-produção)
 - [Referência da API](#referência-da-api)
 - [Frontend](#frontend)
@@ -90,7 +92,30 @@ UniHack/
 
 - **Docker** >= 24 e **Docker Compose** plugin (`docker compose`)
 - **Java 21** e **Maven** (ou use o `./mvnw` incluso no projeto)
-- Porta **80** livre (Traefik dev) e **5433** livre (PostgreSQL exposto)
+- **Node.js** >= 20 (para o frontend Angular)
+- Portas livres: **80** (Traefik), **5433** (PostgreSQL), **8080** (backend), **4200** (frontend)
+
+### Não use `sudo`
+
+Adicione seu usuário ao grupo `docker` e faça logout/login:
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+Confirme com `id` — deve aparecer `docker` na lista de grupos. Rodar com `sudo` ignora o seu `~/.docker` e cria containers com dono `root`, o que atrapalha na hora de limpar.
+
+### Plugin buildx
+
+Se aparecer `WARN Docker Compose requires buildx plugin to be installed` seguido de erros `Can't add file ... to tar: io: read/write on closed pipe`, falta o buildx. O builder legado ainda funciona como fallback, mas instale para evitar ruído:
+
+```bash
+# Arch
+sudo pacman -S docker-buildx
+
+# Debian/Ubuntu
+sudo apt install docker-buildx-plugin
+```
 
 ---
 
@@ -107,6 +132,13 @@ cd UniHack
 
 O arquivo `docker-compose.dev.yml` sobe o Traefik, o PostgreSQL, o MySQL e todos os cinco laboratórios de desafio. Nenhuma variável de ambiente é necessária — tudo usa valores padrão para dev.
 
+> ⚠️ **O `-f docker-compose.dev.yml` é obrigatório.** Sem ele, o Docker Compose usa o `docker-compose.yml`, que é o de **produção** — ele exige um `.env`, um domínio público e o `Dockerfile` do frontend (que [ainda não existe](#limitações-conhecidas)). O build falha com:
+>
+> ```
+> unable to prepare context: unable to evaluate symlinks in Dockerfile path:
+> lstat .../UniHackFrontend/unihack-frontend/Dockerfile: no such file or directory
+> ```
+
 ```bash
 docker compose -f docker-compose.dev.yml up --build -d
 ```
@@ -117,7 +149,9 @@ Verifique se os containers estão de pé:
 docker compose -f docker-compose.dev.yml ps
 ```
 
-Todos devem aparecer com status `running`. O PostgreSQL fica acessível em `localhost:5433`.
+Todos os **8** containers devem aparecer com status `running` (Traefik, PostgreSQL, MySQL e os 5 labs). O PostgreSQL fica acessível em `localhost:5433`.
+
+> Use sempre `-d`. Sem ele o compose fica anexado ao terminal e `Ctrl+C` **derruba todos os containers**. Para acompanhar os logs sem esse risco, veja [Acompanhando os logs](#acompanhando-os-logs).
 
 ### 3. Rode o backend
 
@@ -147,6 +181,59 @@ npm start
 
 A aplicação abre em `http://localhost:4200` (ou outra porta se 4200 estiver ocupada — o Angular exibirá a porta correta no terminal).
 
+### 5. Cadastre os desafios no banco
+
+> ⚠️ **Passo obrigatório.** Subir os containers **não** cadastra os desafios. Os labs e os registros na tabela `challenges` são coisas separadas: o Docker sobe os laboratórios, mas o banco começa vazio. Se pular esta etapa, a tela de CTFs mostra *"Nenhum desafio encontrado com os filtros atuais"* — mensagem enganosa, porque o problema não é filtro nem login, é banco vazio.
+
+A forma mais rápida é inserir direto no Postgres. O `flag_hash` é o MD5 da flag em texto puro, exatamente como o `ChallengeController` gera (`DigestUtils.md5DigestAsHex`):
+
+```bash
+docker exec -i unihack-db-1 psql -U postgres -d unihack <<'SQL'
+INSERT INTO challenges (id, title, description, difficulty, score, slug, flag_hash, category) VALUES
+(gen_random_uuid(), 'SQL Injection',
+ 'Um sistema de login vulneravel esta disponivel. Encontre a flag sem saber a senha.',
+ 'Facil', 100, 'sqli', '1b7d9217ee671ab72340a13ccebec910', 'Web'),
+(gen_random_uuid(), 'Cross-Site Scripting',
+ 'A aplicacao reflete a entrada do usuario sem sanitizar. Execute seu proprio JavaScript na pagina.',
+ 'Facil', 100, 'xss', '321cf024ebf037628605460f087f2134', 'Web'),
+(gen_random_uuid(), 'Fonte Secreta',
+ 'Nem tudo que esta na pagina aparece na tela. Inspecione o codigo-fonte.',
+ 'Muito Facil', 50, 'fonte-secreta', '4980b926ca933a8657a48220715c17b5', 'Web'),
+(gen_random_uuid(), 'Command Injection',
+ 'A ferramenta de ping executa comandos no servidor. Encadeie seu proprio comando e leia o arquivo da flag.',
+ 'Medio', 150, 'cmd-injection', 'd936ad80f9b2fb03eadc30e730e86794', 'Web'),
+(gen_random_uuid(), 'JWT Inseguro',
+ 'A API emite tokens JWT assinados com um segredo fraco. Forje um token de administrador.',
+ 'Medio', 150, 'jwt-inseguro', '0d2a271031364bb1bcc4cc6dbf0f263b', 'Web');
+SQL
+```
+
+Confirme:
+
+```bash
+docker exec unihack-db-1 psql -U postgres -d unihack -c "SELECT title, slug, score FROM challenges;"
+# Esperado: 5 linhas
+```
+
+Alternativa: cadastre via API com um token de ADMIN — veja [Cadastrando desafios](#cadastrando-desafios).
+
+### Acompanhando os logs
+
+**Containers:**
+
+```bash
+docker compose -f docker-compose.dev.yml logs -f            # todos
+docker compose -f docker-compose.dev.yml logs -f db         # só o Postgres
+docker compose -f docker-compose.dev.yml logs -f desafio-sqli
+```
+
+**Backend e frontend** rodam fora do Docker, então os logs saem no próprio terminal onde você executou `./mvnw spring-boot:run` e `npm start`. Se preferir rodá-los em background, redirecione para um arquivo e use `tail -f`:
+
+```bash
+./mvnw spring-boot:run > backend.log 2>&1 &
+tail -f backend.log | grep -E --line-buffered "ERROR|Exception|WARN"
+```
+
 ---
 
 ## Criando o primeiro admin
@@ -154,12 +241,14 @@ A aplicação abre em `http://localhost:4200` (ou outra porta se 4200 estiver oc
 O registro público cria usuários com role `USER`. Para promover um usuário a `ADMIN`, acesse o banco diretamente:
 
 ```bash
-docker exec -it $(docker ps -qf "name=unihack-db-1") \
+docker exec -it unihack-db-1 \
   psql -U postgres -d unihack \
   -c "UPDATE users SET role = 'ADMIN' WHERE matricula = 'SUA_MATRICULA';"
 ```
 
-> Substitua `SUA_MATRICULA` pela matrícula do usuário que deve ser admin.
+> Substitua `SUA_MATRICULA` pela matrícula do usuário que deve ser admin. Confirme com `SELECT username, matricula, role FROM users;`.
+
+O nome do container é `unihack-db-1` porque o compose deriva de `<pasta>_<serviço>_<n>` — se você renomear a pasta do projeto, o nome muda. Nesse caso descubra com `docker compose -f docker-compose.dev.yml ps`.
 
 ---
 
@@ -188,13 +277,21 @@ A flag é recebida em texto puro e armazenada como hash MD5 — o valor original
 
 **Desafios padrão do projeto:**
 
-| Título | Slug | Dificuldade | Pontos | Categoria |
-|---|---|---|---|---|
-| SQL Injection | `sqli` | Fácil | 100 | Web |
-| Cross-Site Scripting | `xss` | Fácil | 100 | Web |
-| Fonte Secreta | `fonte-secreta` | Muito Fácil | 50 | Web |
-| Command Injection | `cmd-injection` | Médio | 150 | Web |
-| JWT Inseguro | `jwt-inseguro` | Médio | 150 | Web |
+| Título | Slug | Dificuldade | Pontos | Categoria | Flag |
+|---|---|---|---|---|---|
+| SQL Injection | `sqli` | Fácil | 100 | Web | `FLAG{sql_injection_concluido_com_sucesso}` |
+| Cross-Site Scripting | `xss` | Fácil | 100 | Web | `FLAG{xss_dom_exploitation_ftw}` |
+| Fonte Secreta | `fonte-secreta` | Muito Fácil | 50 | Web | `FLAG{inspecionar_eh_o_primeiro_passo}` |
+| Command Injection | `cmd-injection` | Médio | 150 | Web | `FLAG{o_ponto_e_virgula_eh_poderoso}` |
+| JWT Inseguro | `jwt-inseguro` | Médio | 150 | Web | `FLAG{jwt_forjado_com_sucesso}` |
+
+> ⚠️ **O slug precisa bater com a rota do Traefik, não com o nome da pasta.** O desafio de command injection fica em `desafios/command-injection/`, mas o slug é **`cmd-injection`** — é o que está no `PathPrefix` do compose. O frontend monta a URL do lab como `labBaseUrl + slug`, então um slug errado gera um botão que leva a 404.
+>
+> A fonte da verdade das flags é o código do próprio desafio (`flag.txt`, `index.js`, `app.py`, `index.html`), não esta tabela. Para conferir todas de uma vez:
+>
+> ```bash
+> grep -rhoE "FLAG\{[^}]+\}" desafios/ | sort -u
+> ```
 
 ---
 
@@ -242,7 +339,14 @@ Com os containers rodando, os labs ficam disponíveis em:
 | XSS | http://localhost/lab/xss |
 | Fonte Secreta | http://localhost/lab/fonte-secreta |
 | Command Injection | http://localhost/lab/cmd-injection |
-| JWT Inseguro | http://localhost/lab/jwt-inseguro |
+| JWT Inseguro | http://localhost/lab/jwt-inseguro/login (POST) · /admin |
+
+> **O JWT Inseguro é só API — não tem interface.** O Flask expõe apenas `POST /login` e `GET /admin`; não existe rota `/`. Um **404 em `http://localhost/lab/jwt-inseguro` é o comportamento esperado**, não um container quebrado. Para testar:
+>
+> ```bash
+> curl -X POST http://localhost/lab/jwt-inseguro/login \
+>   -H "Content-Type: application/json" -d '{"username":"teste"}'
+> ```
 
 ### Submetendo uma flag
 
@@ -272,6 +376,107 @@ curl http://localhost:8080/users/ranking \
 
 ---
 
+## Problemas comuns
+
+### "Nenhum desafio encontrado com os filtros atuais"
+
+A tela de CTFs aparece vazia mesmo com login feito e todos os containers de pé.
+
+**Causa:** a tabela `challenges` está vazia. A mensagem fala em "filtros" e despista — não tem nada a ver com filtro, busca ou autenticação. Subir os containers não cadastra os desafios.
+
+**Diagnóstico:**
+```bash
+docker exec unihack-db-1 psql -U postgres -d unihack -c "SELECT count(*) FROM challenges;"
+```
+
+Se retornar `0`, execute o passo [Cadastre os desafios no banco](#5-cadastre-os-desafios-no-banco).
+
+---
+
+### `unable to prepare context: ... Dockerfile: no such file or directory`
+
+```
+unable to prepare context: unable to evaluate symlinks in Dockerfile path:
+lstat .../UniHackFrontend/unihack-frontend/Dockerfile: no such file or directory
+```
+
+**Causa:** você rodou `docker compose build` sem `-f`, e o Compose pegou o `docker-compose.yml` (produção), que referencia um `Dockerfile` de frontend que ainda não existe.
+
+**Solução:** para desenvolvimento local, use sempre `-f docker-compose.dev.yml`. Os `WARN ... variable is not set` que aparecem junto são do mesmo problema — o compose de produção espera um `.env`.
+
+---
+
+### Erro 500 ao se cadastrar
+
+O log do backend mostra:
+
+```
+ERROR: duplicate key value violates unique constraint "ukr43af9ap4edm43mmtq01oddj6"
+  Detalhe: Key (username)=(Fulano) already exists.
+```
+
+**Causa:** o campo `username` tem constraint `UNIQUE` no model, mas a validação está comentada no `AuthController` — veja [Limitações conhecidas](#limitações-conhecidas). Matrícula duplicada devolve um 409 tratado; **nome** duplicado estoura uma `DataIntegrityViolationException` e vira 500 genérico.
+
+**Contorno:** use outro nome, ou remova o usuário conflitante:
+
+```bash
+docker exec unihack-db-1 psql -U postgres -d unihack \
+  -c "DELETE FROM users WHERE username = 'Fulano';"
+```
+
+---
+
+### Os dados sumiram depois de um `docker compose down`
+
+**Causa:** o serviço `db` do `docker-compose.dev.yml` **não tem volume**. Os dados vivem na camada gravável do container, então `down` apaga usuários, desafios e pontuações. (O compose de produção *tem* volume — `db-data`.)
+
+**Contorno:** use `stop`/`start` em vez de `down`/`up` para preservar os dados entre sessões. Se derrubou mesmo, refaça o passo [Cadastre os desafios no banco](#5-cadastre-os-desafios-no-banco) e recrie o admin.
+
+**Correção definitiva:** adicionar um volume ao serviço `db` no `docker-compose.dev.yml`:
+
+```yaml
+  db:
+    image: postgres:15
+    volumes:
+      - db-dev-data:/var/lib/postgresql/data
+    # ...
+
+volumes:
+  db-dev-data:
+```
+
+---
+
+### `Ctrl+C` derrubou tudo
+
+`docker compose up` **sem `-d`** fica anexado ao terminal, e `Ctrl+C` para todos os containers. Suba com `-d` e acompanhe os logs com `logs -f`.
+
+---
+
+### Rebuild não resolveu
+
+`--no-cache` reconstrói as 5 imagens do zero (leva ~1 min, recompila a extensão `mysqli` do PHP) e **não afeta o banco**. Se o sintoma é dado faltando ou duplicado — desafio não aparece, usuário já existe — o problema está no Postgres, não na imagem. Rebuild só ajuda quando você mudou um `Dockerfile` ou o código de um desafio.
+
+Para o dia a dia, `up -d --build` basta: reconstrói só o que mudou.
+
+---
+
+## Limitações conhecidas
+
+Coisas que ainda não estão prontas — vale saber antes de gastar tempo investigando.
+
+| Item | Situação |
+|---|---|
+| `Dockerfile` do frontend | **Não existe.** O `docker-compose.yml` de produção referencia `UniHackFrontend/unihack-frontend/Dockerfile`, e o build falha sem ele. Há um exemplo em [Deploy em produção](#2-construa-o-frontend-para-produção). |
+| `nginx/nginx.conf` | Arquivo vazio (0 bytes). Precisa de fallback SPA (`try_files`) para as rotas do Angular funcionarem em deep link. |
+| Validação de username duplicado | Comentada em `AuthController.java` (bloco logo após a checagem de matrícula). O método `existsByUsername` **também não existe** no `UserRepository`, então descomentar sozinho não compila — é preciso adicionar `boolean existsByUsername(String username);` à interface. |
+| Painel admin | Não existe. Desafios só podem ser criados via `curl`/SQL. |
+| Interface do JWT Inseguro | O desafio é só API Flask, sem UI. |
+| Seed de desafios | Manual. Não há migration nem script versionado — o SQL está neste README. |
+| Deploy em VPS | Ainda não foi feito. |
+
+---
+
 ## Deploy em produção
 
 ### 1. Configure as variáveis de ambiente
@@ -296,7 +501,9 @@ JWT_SECRET=chave_aleatoria_longa_minimo_32_caracteres
 
 ### 2. Construa o frontend para produção
 
-Antes de subir, gere o build estático do Angular e adicione um `Dockerfile` em `UniHackFrontend/unihack-frontend/` que sirva os arquivos com nginx. Exemplo de `Dockerfile`:
+> ⚠️ **Este passo é obrigatório e ainda não foi feito no repositório.** O `docker-compose.yml` referencia `UniHackFrontend/unihack-frontend/Dockerfile`, que não existe — sem criá-lo, o build de produção falha antes de qualquer outra coisa.
+
+Crie um `Dockerfile` em `UniHackFrontend/unihack-frontend/` que gere o build estático do Angular e o sirva com nginx:
 
 ```dockerfile
 FROM node:20-alpine AS build
@@ -308,8 +515,29 @@ RUN npm run build -- --configuration=production
 
 FROM nginx:alpine
 COPY --from=build /app/dist/unihack-frontend/browser /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ```
+
+O `outputPath` no `angular.json` é `dist/unihack-frontend`, e o Angular 19 coloca os arquivos do browser em um subdiretório `browser/` — por isso o caminho do `COPY` termina em `/browser`.
+
+O `nginx.conf` **precisa** do fallback para SPA, senão qualquer acesso direto a uma rota (`/ranking`, `/perfil`, ou um F5 fora da home) devolve 404, porque o roteamento é do Angular e o nginx procura um arquivo que não existe:
+
+```nginx
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+> O arquivo `nginx/nginx.conf` na raiz deste repositório está vazio (0 bytes) e não é usado por nenhum serviço do compose.
+
+Lembre também de apontar o `environment.ts` de produção para o domínio real (`https://SEU_DOMINIO` e `https://SEU_DOMINIO/lab`) — em produção o backend fica atrás de `/api`, diferente do dev.
 
 ### 3. Suba com o compose de produção
 
@@ -317,15 +545,19 @@ EXPOSE 80
 docker compose up --build -d
 ```
 
+Aqui o `-f` é dispensável: sem ele o Compose usa o `docker-compose.yml`, que é o de produção mesmo.
+
 O Traefik cuida automaticamente dos certificados SSL via Let's Encrypt. HTTP é redirecionado para HTTPS.
 
 ### 4. Crie o admin em produção
 
 ```bash
-docker exec -it $(docker ps -qf "name=unihack-db-1") \
+docker exec -it unihack-db-1 \
   psql -U $POSTGRES_USER -d unihack \
   -c "UPDATE users SET role = 'ADMIN' WHERE matricula = 'SUA_MATRICULA';"
 ```
+
+E cadastre os desafios — o banco de produção também começa vazio. Use o SQL do passo [Cadastre os desafios no banco](#5-cadastre-os-desafios-no-banco), trocando `-U postgres` pelo `$POSTGRES_USER` do seu `.env`.
 
 ---
 
